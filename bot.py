@@ -44,7 +44,11 @@ async def on_message(message):
     if message.content == 'raise exception':
         raise discord.DiscordException
 
+    if bot.user.mentioned_in(message):  # action on being mentioned
+        await message.channel.send("please don't nothing works yet (but my prefix is // and //pick does work")
+
     await bot.process_commands(message)
+
 
 
 @bot.event
