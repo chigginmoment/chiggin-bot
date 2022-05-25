@@ -51,7 +51,7 @@ async def on_message(message):
             pref_array = prefs.readlines()
 
         for pref in pref_array:
-            parsed = pref.split()
+            parsed = pref.split("|")
             print(f'Echoing message in server {parsed[2]} in channel {parsed[3]}')
             echo_channel = bot.get_channel(int(parsed[1]))
             if message.content:
@@ -69,7 +69,7 @@ async def on_message(message):
     if re.match(r'🐖.*💨.*<:dj:896639618601074689>', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
-    if "amogus" in message.content:
+    if re.match(r'(?i).*amog.*', message.content):
         await message.channel.send("sus")
     """
     if bot.user.mentioned_in(message):  # action on being mentioned
@@ -98,7 +98,7 @@ async def on_command_error(ctx, error):
 @bot.command(name='speak', help='it doesnt work')
 @commands.has_role("Torpedo")
 async def speak(ctx):
-    await ctx.send("I have no idea what I'm doing.")
+    await ctx.send("This function tests role permissions.")
 """
 
 
@@ -110,12 +110,6 @@ async def pick_random(ctx, start: int, end: int):
 
     await ctx.send(num)
 
-
-"""
-@bot.command(name="emoji")
-async def emoji(ctx):
-    await ctx.send("🐖💨<:gupy:978882222054592553>")
-"""
 
 @bot.command(name='here', help='Send in target channel for reposting.')
 async def here(ctx):
@@ -132,14 +126,14 @@ async def here(ctx):
 
     with open("server_prefs.txt", 'w') as prefs:
         for pref in pref_array:
-            if pref != "\n" and int(pref.split()[0]) == server_id:  # if reached an existing entry
-                pref_array[pref_array.index(pref)] = f'{server_id} {channel_id} {server_name} {channel_name}\n'
+            if pref != "\n" and int(pref.split("|")[0]) == server_id:  # if reached an existing entry
+                pref_array[pref_array.index(pref)] = f'{server_id}|{channel_id}|{server_name}|{channel_name}\n'
                 prefs.writelines(pref_array)
                 await ctx.send("Done.")
                 return
 
         # if made it here then there is no empty newline, only write at end of file
-        new_pref = f'{server_id} {channel_id} {server_name} {channel_name}\n'
+        new_pref = f'{server_id}|{channel_id}|{server_name}|{channel_name}\n'
         pref_array.append(new_pref)
         prefs.writelines(pref_array)
         await ctx.send("Done.")
@@ -156,7 +150,7 @@ async def nothere(ctx):
 
     with open("server_prefs.txt", "w") as prefs:
         for pref in pref_array:
-            if pref != "\n" and int(pref.split()[1]) == channel_id:
+            if pref != "\n" and int(pref.split("|")[1]) == channel_id:
                 pref_array.remove(pref)
                 prefs.writelines(pref_array)
 
