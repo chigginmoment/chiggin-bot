@@ -5,25 +5,29 @@ import re
 
 from discord.ext import commands
 from dotenv import load_dotenv
-bot = commands.Bot(command_prefix="//", description="I'm retaredd")
-channel = None
 
+bot = commands.Bot(command_prefix="//", description="am chiggin")
+channel = None
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_SERVER')
 
+
 @bot.event
 async def on_ready():
-
     for guild in bot.guilds:
         print(f'Connected to: {guild}')
-        if guild.name == GUILD: # figures out what the current guild is
+        if guild.name == GUILD:  # figures out what the current guild is
             break
 
     game = discord.Game("with cloning")
-    await bot.change_presence(status=discord.Status.idle, activity=game)
+    await bot.change_presence(status=discord.Status.online, activity=game)
 
+
+@bot.event
+async def on_guild_join():
+    print("Joined new server.")
 
 """
 @bot.event
@@ -33,6 +37,7 @@ async def on_member_join(member):
         f'Hello {member.name}.'
     )
 """
+
 
 @bot.event
 async def on_message(message):
@@ -52,7 +57,7 @@ async def on_message(message):
             if message.content:
                 await echo_channel.send(message.content)
             if message.attachments:
-                await echo_channel.send(message.attachments[0].url)
+                await echo_channel.send("\n".join(x.url for x in message.attachments))
 
     if message.content == 'Speak.':
         response2 = "I've created another Discord bot."
@@ -66,12 +71,12 @@ async def on_message(message):
 
     if "amogus" in message.content:
         await message.channel.send("sus")
-
+    """
     if bot.user.mentioned_in(message):  # action on being mentioned
-        await message.channel.send("please don't nothing works yet (but my prefix is // and //pick does work)")
+        await message.channel.send("Ping the other one. My prefix is //.")
+    """
 
     await bot.process_commands(message)
-
 
 
 @bot.event
@@ -89,10 +94,12 @@ async def on_command_error(ctx, error):
         await ctx.send('You do not have the correct role for this command.')
 
 
+"""
 @bot.command(name='speak', help='it doesnt work')
 @commands.has_role("Torpedo")
 async def speak(ctx):
     await ctx.send("I have no idea what I'm doing.")
+"""
 
 
 @bot.command(name='pick', help="Picks a number between 2 numbers specified.")
@@ -104,10 +111,11 @@ async def pick_random(ctx, start: int, end: int):
     await ctx.send(num)
 
 
+"""
 @bot.command(name="emoji")
 async def emoji(ctx):
     await ctx.send("🐖💨<:gupy:978882222054592553>")
-
+"""
 
 @bot.command(name='here', help='Send in target channel for reposting.')
 async def here(ctx):
@@ -125,14 +133,6 @@ async def here(ctx):
     with open("server_prefs.txt", 'w') as prefs:
         for pref in pref_array:
             if pref != "\n" and int(pref.split()[0]) == server_id:  # if reached an existing entry
-                pref_array[pref_array.index(pref)] = f'{server_id} {channel_id} {server_name} {channel_name}\n'
-                prefs.writelines(pref_array)
-                await ctx.send("Done.")
-                return
-
-        # if made it here then there is no existing entry
-        for pref in pref_array:
-            if pref == "\n":
                 pref_array[pref_array.index(pref)] = f'{server_id} {channel_id} {server_name} {channel_name}\n'
                 prefs.writelines(pref_array)
                 await ctx.send("Done.")
