@@ -24,18 +24,35 @@ async def on_ready():
     game = discord.Game("with cloning")
     await bot.change_presence(status=discord.Status.idle, activity=game)
 
+
+"""
 @bot.event
 async def on_member_join(member):
     await member.create_dm()
     await member.dm_channel.send(
         f'Hello {member.name}.'
     )
-
+"""
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
+
+    if message.channel.id == 979094074084692028:  # This is where the bot copies everything I say
+        await message.channel.send("Heard.")
+
+        with open("server_prefs.txt", "r") as prefs:
+            pref_array = prefs.readlines()
+
+        for pref in pref_array:
+            parsed = pref.split()
+            print(f'Echoing message in server {parsed[2]} in channel {parsed[3]}')
+            echo_channel = bot.get_channel(int(parsed[1]))
+            if message.content:
+                await echo_channel.send(message.content)
+            if message.attachments:
+                await echo_channel.send(message.attachments[0].url)
 
     if message.content == 'Speak.':
         response2 = "I've created another Discord bot."
