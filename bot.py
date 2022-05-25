@@ -1,11 +1,12 @@
 import os
 import discord
 import random
+import emojis
 
 from discord.ext import commands
 from dotenv import load_dotenv
 bot = commands.Bot(command_prefix="//", description="I'm retaredd")
-
+channel = None
 
 
 load_dotenv()
@@ -14,15 +15,18 @@ GUILD = os.getenv('DISCORD_SERVER')
 
 @bot.event
 async def on_ready():
+
     for guild in bot.guilds:
-        if guild.name == GUILD:
+        print(f'Connected to: {guild}')
+        if guild.name == GUILD: # figures out what the current guild is
             break
 
-    print(
-        f'{bot.user} is connected to the following guild:\n'
-        f'{guild.name}(id: {guild.id})'
-    )
-
+    with open('server_prefs.txt', 'r+') as prefs: # read all server preferences here
+        pref = prefs.readline()
+        global channel
+        while pref:
+            if pref.split()[0] == guild.name:
+                channel = pref.split()[1]
 
 @bot.event
 async def on_member_join(member):
@@ -44,8 +48,11 @@ async def on_message(message):
     if message.content == 'raise exception':
         raise discord.DiscordException
 
+#    if message.content.match(r'🐖.*💨.*<:dj:896639618601074689>'):
+#        await message.channel.send("🐖💨<:gupy:978882222054592553>")
+
     if bot.user.mentioned_in(message):  # action on being mentioned
-        await message.channel.send("please don't nothing works yet (but my prefix is // and //pick does work")
+        await message.channel.send("please don't nothing works yet (but my prefix is // and //pick does work)")
 
     await bot.process_commands(message)
 
@@ -66,7 +73,7 @@ async def on_command_error(ctx, error):
         await ctx.send('You do not have the correct role for this command.')
 
 
-@bot.command(name='Speak', help='it doesnt work')
+@bot.command(name='speak', help='it doesnt work')
 @commands.has_role("Torpedo")
 async def speak(ctx):
     await ctx.send("I have no idea what I'm doing.")
@@ -80,5 +87,16 @@ async def pick_random(ctx, start: int, end: int):
 
     await ctx.send(num)
 
+
+@bot.command(name="emoji")
+async def emoji(ctx):
+    await ctx.send("🐖💨<:gupy:978882222054592553>")
+
+
+@bot.command(name='here', help='Send in target channel for reposting.')
+async def here(ctx):
+    #server_name = ctx.message.guild.name
+    #print(server_name)
+    pass
 
 bot.run(TOKEN)
