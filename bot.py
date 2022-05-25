@@ -71,6 +71,9 @@ async def speak(ctx):
 @bot.command(name='pick', help="Picks a number between 2 numbers specified.")
 async def pick_random(ctx, start: int, end: int):
     num = random.randint(start, end)
+    if start < 2 < end:
+        num = 2
+
     await ctx.send(num)
 
 
