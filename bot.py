@@ -1,7 +1,7 @@
 import os
 import discord
 import random
-import emojis
+import re
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -21,12 +21,8 @@ async def on_ready():
         if guild.name == GUILD: # figures out what the current guild is
             break
 
-    with open('server_prefs.txt', 'r+') as prefs: # read all server preferences here
-        pref = prefs.readline()
-        global channel
-        while pref:
-            if pref.split()[0] == guild.name:
-                channel = pref.split()[1]
+    game = discord.Game("with cloning")
+    await bot.change_presence(status=discord.Status.idle, activity=game)
 
 @bot.event
 async def on_member_join(member):
@@ -48,8 +44,11 @@ async def on_message(message):
     if message.content == 'raise exception':
         raise discord.DiscordException
 
-#    if message.content.match(r'🐖.*💨.*<:dj:896639618601074689>'):
-#        await message.channel.send("🐖💨<:gupy:978882222054592553>")
+    if re.match(r'🐖.*💨.*<:dj:896639618601074689>', message.content):
+        await message.channel.send("🐖💨<:gupy:978882222054592553>")
+
+    if "amogus" in message.content:
+        await message.channel.send("sus")
 
     if bot.user.mentioned_in(message):  # action on being mentioned
         await message.channel.send("please don't nothing works yet (but my prefix is // and //pick does work)")
@@ -95,8 +94,56 @@ async def emoji(ctx):
 
 @bot.command(name='here', help='Send in target channel for reposting.')
 async def here(ctx):
-    #server_name = ctx.message.guild.name
-    #print(server_name)
-    pass
+    await ctx.send("Setting this channel as this server's default repost channel...")
+    server_id = ctx.message.guild.id  # Used to ident server from which this was sent
+    server_name = ctx.message.guild.name
+
+    channel_id = ctx.message.channel.id
+    channel_name = ctx.message.channel
+    # print(server_id, channel_id)
+
+    with open('server_prefs.txt', 'r') as prefs:  # read all server preferences here
+        pref_array = prefs.readlines()
+
+    with open("server_prefs.txt", 'w') as prefs:
+        for pref in pref_array:
+            if pref != "\n" and int(pref.split()[0]) == server_id:  # if reached an existing entry
+                pref_array[pref_array.index(pref)] = f'{server_id} {channel_id} {server_name} {channel_name}\n'
+                prefs.writelines(pref_array)
+                await ctx.send("Done.")
+                return
+
+        # if made it here then there is no existing entry
+        for pref in pref_array:
+            if pref == "\n":
+                pref_array[pref_array.index(pref)] = f'{server_id} {channel_id} {server_name} {channel_name}\n'
+                prefs.writelines(pref_array)
+                await ctx.send("Done.")
+                return
+
+        # if made it here then there is no empty newline, only write at end of file
+        new_pref = f'{server_id} {channel_id} {server_name} {channel_name}\n'
+        pref_array.append(new_pref)
+        prefs.writelines(pref_array)
+        await ctx.send("Done.")
+        return
+
+
+@bot.command(name='nothere', help="Unsets this channel as your repost channel.")
+async def nothere(ctx):
+    await ctx.send("Unsetting this channel...")
+    channel_id = ctx.message.channel.id
+
+    with open("server_prefs.txt", "r") as prefs:
+        pref_array = prefs.readlines()
+
+    with open("server_prefs.txt", "w") as prefs:
+        for pref in pref_array:
+            if pref != "\n" and int(pref.split()[1]) == channel_id:
+                pref_array.remove(pref)
+                prefs.writelines(pref_array)
+
+    await ctx.send("Done.")
+
 
 bot.run(TOKEN)
