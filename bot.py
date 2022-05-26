@@ -1,3 +1,4 @@
+import asyncio
 import os
 import discord
 import random
@@ -12,6 +13,8 @@ channel = None
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_SERVER')
+
+awaiting_response = []
 
 
 @bot.event
@@ -77,8 +80,11 @@ async def on_message(message):
 
     if not message.guild:
         try:
-            # if message.content in ("yes", "no"): # This is so it doesn't start another DM query on answer
-            #     return
+            if message.author.id in awaiting_response:
+                return
+            else:
+                awaiting_response.append(message.author.id)
+
             await message.channel.send("DM received. Is this feedback to make an improvement? Please reply with `yes` "
                                        "or `no`.")
 
@@ -94,8 +100,12 @@ async def on_message(message):
                 print(f'{message.author} said {message.content} on {message.created_at}')
             else:
                 await message.channel.send("...")
+            awaiting_response.remove(message.author.id)
         except discord.errors.Forbidden:
             pass
+        except asyncio.TimeoutError:
+            await message.channel.send("Timeout. No response recorded.")
+            awaiting_response.remove(message.author.id)
 
     await bot.process_commands(message)
 
