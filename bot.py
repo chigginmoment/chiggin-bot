@@ -21,7 +21,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("with cloning")
+    game = discord.Game("with angry red text")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
 
@@ -71,10 +71,32 @@ async def on_message(message):
 
     if re.match(r'(?i).*amog.*', message.content):
         await message.channel.send("sus")
-    """
+
     if bot.user.mentioned_in(message):  # action on being mentioned
-        await message.channel.send("Ping the other one. My prefix is //.")
-    """
+        await message.channel.send("<@" + str(374231745622704130) + ">")
+
+    if not message.guild:
+        try:
+            if message.content in ("yes", "no"): # This is so it doesn't start another DM query on answer
+                return
+            await message.channel.send("DM received. Is this feedback to make an improvement? Please reply with `yes` "
+                                       "or `no`.")
+
+            def check(m):
+                return "yes" in m.content or "no" in m.content
+
+            msg = await bot.wait_for('message', timeout=20.0, check=check)
+            # print(f'{message.author} said {message.content} on {message.created_at}')
+            if "yes" in msg.content:
+                await message.channel.send("Thanks, I'll consider your feedback. Or I would if the system was "
+                                           "implemented. It's not.")
+                with open("feedback.txt", "a") as f:
+                    f.write(f'{message.author} said {message.content} on {message.created_at}')
+                print(f'{message.author} said {message.content} on {message.created_at}')
+            else:
+                await message.channel.send("...")
+        except discord.errors.Forbidden:
+            pass
 
     await bot.process_commands(message)
 
