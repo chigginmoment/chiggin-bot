@@ -77,21 +77,20 @@ async def on_message(message):
 
     if not message.guild:
         try:
-            if message.content in ("yes", "no"): # This is so it doesn't start another DM query on answer
-                return
+            # if message.content in ("yes", "no"): # This is so it doesn't start another DM query on answer
+            #     return
             await message.channel.send("DM received. Is this feedback to make an improvement? Please reply with `yes` "
                                        "or `no`.")
 
             def check(m):
-                return "yes" in m.content or "no" in m.content
+                return ("yes" in m.content.lower() or "no" in m.content.lower()) and m.author == message.author
 
             msg = await bot.wait_for('message', timeout=20.0, check=check)
             # print(f'{message.author} said {message.content} on {message.created_at}')
-            if "yes" in msg.content:
-                await message.channel.send("Thanks, I'll consider your feedback. Or I would if the system was "
-                                           "implemented. It's not.")
+            if "yes" in msg.content.lower():
+                await message.channel.send("Thanks, I'll consider your feedback.")
                 with open("feedback.txt", "a") as f:
-                    f.write(f'{message.author} said {message.content} on {message.created_at}')
+                    f.write(f"{message.author} said {message.content} on {message.created_at}\n")
                 print(f'{message.author} said {message.content} on {message.created_at}')
             else:
                 await message.channel.send("...")
