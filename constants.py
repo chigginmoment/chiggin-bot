@@ -1,1 +1,0 @@
-# Placeholder where i MIGHT move all of the constants. Not sure how to do this in Python.
