@@ -18,6 +18,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_SERVER')
 
 awaiting_response = []
+pref_array = []
 
 
 @bot.event
@@ -29,6 +30,10 @@ async def on_ready():
 
     game = discord.Game("with PostgreSQL")
     await bot.change_presence(status=discord.Status.online, activity=game)
+
+    with open("server_prefs.txt", "r") as prefs:
+        global pref_array
+        pref_array = prefs.readlines()
 
 
 @bot.event
@@ -52,9 +57,6 @@ async def on_message(message):
 
     if message.channel.id == 979094074084692028:  # This is where the bot copies everything I say
         await message.channel.send("Heard.")
-
-        with open("server_prefs.txt", "r") as prefs:
-            pref_array = prefs.readlines()
 
         for pref in pref_array:
             parsed = pref.split("|")
@@ -113,6 +115,11 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
+async def on_reaction_add(message):
+    """Checks posts for 3 ♻ reaction in order to manage reposts."""
+    pass
+
+
 @bot.event
 async def on_error(event, *args, **kwargs):
     with open('err.log', 'a') as f:
@@ -155,8 +162,8 @@ async def here(ctx):
     channel_name = ctx.message.channel
     # print(server_id, channel_id)
 
-    with open('server_prefs.txt', 'r') as prefs:  # read all server preferences here
-        pref_array = prefs.readlines()
+#    with open('server_prefs.txt', 'r') as prefs:  # read all server preferences here
+#        pref_array = prefs.readlines()
 
     with open("server_prefs.txt", 'w') as prefs:
         for pref in pref_array:
@@ -178,9 +185,6 @@ async def here(ctx):
 async def nothere(ctx):
     await ctx.send("Unsetting this channel...")
     channel_id = ctx.message.channel.id
-
-    with open("server_prefs.txt", "r") as prefs:
-        pref_array = prefs.readlines()
 
     with open("server_prefs.txt", "w") as prefs:
         for pref in pref_array:

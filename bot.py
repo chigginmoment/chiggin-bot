@@ -8,14 +8,15 @@ from storage import *
 
 
 class Bot(commands.Bot):
+    """Override initialization to include database."""
 
     def __init__(self, command_prefix, help_command="help", description=None):
         super().__init__(command_prefix, help_command, description)
-        self.connection = connect_to_db()
+        self.connection = db_connect()
 
     def start(self, *args, **kwargs):
         super().start(self, *args, **kwargs)
 
     def close(self):
-        disconnect_from_db(self.connection)
+        db_disconnect(self.connection)
         super().close()

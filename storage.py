@@ -3,7 +3,7 @@ import psycopg2
 import constants
 
 
-def connect_to_db():
+def db_connect():
     """Returns the connection object to database."""
     try:
 
@@ -17,13 +17,13 @@ def connect_to_db():
     except (Exception, psycopg2) as error:
         print("Error in connecting to database: ", error)
 
-# TODO: Add function INSERT SERVER
-# TODO: Add function DELETE SERVER
-# TODO: Add function MODIFY SERVER
+# TODO: Add function DB INSERT
+# TODO: Add function DB DELETE
+# TODO: Add function DB MODIFY
 # Do I want to store feedback in the server as well? I might.
 
 
-def disconnect_from_db(connection):
+def db_disconnect(connection):
     """Disconnects from database for clean exit."""
 
     if connection:
