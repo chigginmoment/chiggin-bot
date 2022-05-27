@@ -3,6 +3,8 @@ import os
 import discord
 import random
 import re
+import constants
+import psycopg2
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -24,7 +26,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("with angry red text")
+    game = discord.Game("with PostgreSQL")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
 
