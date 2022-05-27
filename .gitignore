@@ -1,1 +1,4 @@
 constants.py
+server_prefs.txt
+feedback.txt
+.env
