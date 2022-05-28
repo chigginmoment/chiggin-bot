@@ -10,7 +10,6 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from discord.utils import get
 
-
 bot = commands.Bot(command_prefix="//", description="am chiggin")
 channel = None
 
@@ -41,6 +40,7 @@ async def on_ready():
 async def on_guild_join():
     print("Joined new server.")
 
+
 """
 @bot.event
 async def on_member_join(member):
@@ -56,30 +56,30 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    if message.channel.id == 979094074084692028:  # This is where the bot copies everything I say
+    if message.channel.id == constants.CHANNEL:  # This is where the bot copies everything I say
         await message.channel.send("Heard.")
 
         for pref in pref_array:
             parsed = pref.split("|")
-            print(f'Echoing message in server {parsed[2]} in channel {parsed[3]}')
+            channel_name = parsed[3].strip("\n")
+            print(f"Echoing message in server {parsed[2]} in channel {channel_name}")
             echo_channel = bot.get_channel(int(parsed[1]))
             if message.content:
                 await echo_channel.send(message.content)
             if message.attachments:
                 await echo_channel.send("\n".join(x.url for x in message.attachments))
 
-    if message.content == 'Speak.':
-        response2 = "I've created another Discord bot."
-        await message.channel.send(response2)
-
     if message.content == 'raise exception':
         raise discord.DiscordException
 
-    if re.match(r'🐖.*💨.*<:dj:896639618601074689>', message.content):
-        await message.channel.send("🐖💨<:gupy:978882222054592553>")
-
     if re.match(r'(?i).*amog.*', message.content):
         await message.channel.send("sus")
+
+    if re.match(r'(?i).*ragnar.*', message.content):
+        await message.channel.send(constants.RAGNAR)
+
+    if re.match(r'.*<:dj:896639618601074689>.*', message.content):
+        await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     if bot.user.mentioned_in(message):  # action on being mentioned
         await message.channel.send("<@" + str(374231745622704130) + ">")
@@ -174,10 +174,6 @@ async def here(ctx):
 
     channel_id = ctx.message.channel.id
     channel_name = ctx.message.channel
-    # print(server_id, channel_id)
-
-#    with open('server_prefs.txt', 'r') as prefs:  # read all server preferences here
-#        pref_array = prefs.readlines()
 
     with open("server_prefs.txt", 'w') as prefs:
         for pref in pref_array:
