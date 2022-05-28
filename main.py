@@ -8,6 +8,7 @@ import psycopg2
 
 from discord.ext import commands
 from dotenv import load_dotenv
+from discord.utils import get
 
 
 bot = commands.Bot(command_prefix="//", description="am chiggin")
@@ -115,9 +116,22 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
-async def on_reaction_add(message):
+@bot.event
+async def on_raw_reaction_add(payload):
     """Checks posts for 3 ♻ reaction in order to manage reposts."""
-    pass
+    react_chan = bot.get_channel(payload.channel_id)
+    message = await react_chan.fetch_message(payload.message_id)
+
+    flag = False
+    for pref in pref_array:
+        if message.channel.id == int(pref.split("|")[1]):
+            flag = True
+
+    if message.author == bot.user and payload.emoji.name == "♻️" and flag:
+        reaction = get(message.reactions, emoji=payload.emoji.name)
+
+        if reaction and reaction.count >= 3:
+            await message.delete()
 
 
 @bot.event
