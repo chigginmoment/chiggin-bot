@@ -19,7 +19,7 @@ GUILD = os.getenv('DISCORD_SERVER')
 
 awaiting_response = []
 pref_array = []
-
+spam_protection = []
 
 @bot.event
 async def on_ready():
@@ -53,6 +53,7 @@ async def on_member_join(member):
 
 @bot.event
 async def on_message(message):
+
     if message.author == bot.user:
         return
 
@@ -72,11 +73,19 @@ async def on_message(message):
     if message.content == 'raise exception':
         raise discord.DiscordException
 
-    if re.match(r'(?i).*amog.*', message.content):
-        await message.channel.send("sus")
+    if re.match(r'(?i).*amog.*', message.content) and message.channel.id not in spam_protection:
+        roll = random.randint(1, 3)
+        if roll == 1:
+            spam_protection.append(message.channel.id)
+            await message.channel.send("sus")
+            await asyncio.sleep(20)
+            spam_protection.remove(message.channel.id)
 
-    if re.match(r'(?i).*ragnar.*', message.content):
+    if re.match(r'(?i).*ragnar.*', message.content) and message.channel.id not in spam_protection:
+        spam_protection.append(message.channel.id)
         await message.channel.send(constants.RAGNAR)
+        await asyncio.sleep(60)
+        spam_protection.remove(message.channel.id)
 
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
