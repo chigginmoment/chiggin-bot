@@ -5,6 +5,7 @@ import random
 import re
 import constants
 import psycopg2
+from datetime import datetime
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -84,14 +85,14 @@ async def on_message(message):
     if re.match(r'(?i).*ragnar.*', message.content) and message.channel.id not in spam_protection:
         spam_protection.append(message.channel.id)
         await message.channel.send(constants.RAGNAR)
-        await asyncio.sleep(60)
+        await asyncio.sleep(180)
         spam_protection.remove(message.channel.id)
 
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     if bot.user.mentioned_in(message):  # action on being mentioned
-        await message.channel.send("<@" + str(374231745622704130) + ">")
+        await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
 
     if not message.guild:
         try:
@@ -141,6 +142,34 @@ async def on_raw_reaction_add(payload):
 
         if reaction and reaction.count >= 3:
             await message.delete()
+
+    elif payload.emoji.id == constants.DJ_EMOTE:  # This will become able to set on a per-server basis
+        archive_channel = bot.get_channel(constants.ARCHIVE)
+        embed = discord.Embed(color=0xA9B0FF, title="Message link", url=message.jump_url)
+        # embed is spaghetti so FIXME but later
+        embed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
+
+        content = "Image only"
+        if message.content:
+            content = message.content
+        embed.add_field(name="Message", value=content, inline=False)
+
+        if message.embeds:
+            main_embed = message.embeds[0]
+            main_picture = main_embed.image.url
+            embed.set_image(url=main_picture)
+
+            embed.add_field(name=main_embed.author.name, value=main_embed.description, inline=False)
+            for field in main_embed.fields:
+                embed.add_field(name=field.name, value=field.value, inline=field.inline)
+
+        if message.attachments:
+            embed.set_image(url=message.attachments[0].url)  # No idea how to put multiple images in an embed
+
+        embed.set_footer(text=f"Message sent at {message.created_at} and pinned at {datetime.now()}.")
+
+        await archive_channel.send(content=f" In {message.channel.mention} pinned by {payload.member.name}",
+                                   embed=embed)
 
 
 @bot.event
