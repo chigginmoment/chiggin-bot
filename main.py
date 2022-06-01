@@ -29,7 +29,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("with PostgreSQL")
+    game = discord.Game("with archiving content")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     with open("server_prefs.txt", "r") as prefs:
@@ -131,6 +131,9 @@ async def on_raw_reaction_add(payload):
     """Checks posts for 3 ♻ reaction in order to manage reposts."""
     react_chan = bot.get_channel(payload.channel_id)
     message = await react_chan.fetch_message(payload.message_id)
+    reaction = get(message.reactions, emoji=payload.emoji.name)
+
+    # print(payload.emoji.name == "😭")
 
     flag = False
     for pref in pref_array:
@@ -138,12 +141,12 @@ async def on_raw_reaction_add(payload):
             flag = True
 
     if message.author == bot.user and payload.emoji.name == "♻️" and flag:
-        reaction = get(message.reactions, emoji=payload.emoji.name)
-
         if reaction and reaction.count >= 3:
             await message.delete()
 
-    elif payload.emoji.id == constants.DJ_EMOTE:  # This will become able to set on a per-server basis
+    elif payload.emoji.name == "😭" and reaction.count < 2 and payload.guild_id == 722841977129009296:
+        # This will become able to set on a per-server basis
+        # print("embedding")
         archive_channel = bot.get_channel(constants.ARCHIVE)
         embed = discord.Embed(color=0xA9B0FF, title="Message link", url=message.jump_url)
         # embed is spaghetti so FIXME but later
