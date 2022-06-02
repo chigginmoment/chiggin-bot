@@ -6,12 +6,13 @@ import re
 import constants
 import psycopg2
 from datetime import datetime
+from bot import Bot
 
 from discord.ext import commands
 from dotenv import load_dotenv
 from discord.utils import get
 
-bot = commands.Bot(command_prefix="//", description="am chiggin")
+bot = Bot()
 channel = None
 
 load_dotenv()
@@ -29,7 +30,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("with archiving content")
+    game = discord.Game("implementing database methods")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     with open("server_prefs.txt", "r") as prefs:

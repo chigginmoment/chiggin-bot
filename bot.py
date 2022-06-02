@@ -10,13 +10,10 @@ from storage import *
 class Bot(commands.Bot):
     """Override initialization to include database."""
 
-    def __init__(self, command_prefix, help_command="help", description=None):
-        super().__init__(command_prefix, help_command, description)
+    def __init__(self):
+        super().__init__(command_prefix="//", description="am chiggin")
         self.connection = db_connect()
 
-    def start(self, *args, **kwargs):
-        super().start(self, *args, **kwargs)
-
-    def close(self):
+    async def close(self):
         db_disconnect(self.connection)
-        super().close()
+        await super().close()
