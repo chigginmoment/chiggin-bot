@@ -16,7 +16,7 @@ def db_connect():
         print("Connection to database: ", constants.DB_NAME)
 
         return connection
-    except (Exception, psycopg2) as error:
+    except (Exception) as error:
         print("Error in connecting to database: ", error)
 
 
