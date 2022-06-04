@@ -34,15 +34,19 @@ async def on_ready():
     game = discord.Game("undergoing core storage system changes. Some functions disabled.")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
-    with open("server_prefs.txt", "r") as prefs:
-        global pref_array
-        pref_array = prefs.readlines()
+    global pref_array
+    pref_array = db_update(bot.connection)
 
 
 @bot.event
 async def on_guild_join():
     print("Joined new server.")
 
+
+@bot.event
+async def on_guild_remove(guild):
+    # TODO: Remove guild from database
+    pass
 
 """
 @bot.event
@@ -63,15 +67,18 @@ async def on_message(message):
     if message.channel.id == constants.CHANNEL:  # This is where the bot copies everything I say
         await message.channel.send("Heard.")
 
+        print("Echoing message.")
         for pref in pref_array:
-            parsed = pref.split("|")
-            channel_name = parsed[3].strip("\n")
-            print(f"Echoing message in server {parsed[2]} in channel {channel_name}")
-            echo_channel = bot.get_channel(int(parsed[1]))
-            if message.content:
-                await echo_channel.send(message.content)
-            if message.attachments:
-                await echo_channel.send("\n".join(x.url for x in message.attachments))
+            if pref[1] is not None:
+                channel_name = pref[4]
+                print(f"Echoing message in server {pref[3]} in channel {channel_name}")
+                echo_channel = bot.get_channel(int(pref[1]))
+                if message.content:
+                    await echo_channel.send(message.content)
+                if message.attachments:
+                    await echo_channel.send("\n".join(x.url for x in message.attachments))
+
+        print("Done echoing.")
 
     if message.content == 'raise exception':
         raise discord.DiscordException
@@ -139,17 +146,21 @@ async def on_raw_reaction_add(payload):
 
     flag = False
     for pref in pref_array:
-        if message.channel.id == int(pref.split("|")[1]):
+        if message.channel.id == pref[1]:
             flag = True
 
     if message.author == bot.user and payload.emoji.name == "♻️" and flag:
         if reaction and reaction.count >= 3:
             await message.delete()
 
-    elif payload.emoji.name == "😭" and reaction.count < 2 and payload.guild_id == 722841977129009296:
+    elif payload.emoji.name == constants.ARCHIVE_EMOTE and reaction.count < 2:
         # This will become able to set on a per-server basis
         # print("embedding")
-        archive_channel = bot.get_channel(constants.ARCHIVE)
+        archive_channel = bot.get_channel(int(db_fetch_archive(bot.connection, str(payload.guild_id))))
+
+        if not archive_channel:
+            return
+
         embed = discord.Embed(color=0xA9B0FF, title="Message link", url=message.jump_url)
         # embed is spaghetti so FIXME but later
         embed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
@@ -176,17 +187,6 @@ async def on_raw_reaction_add(payload):
         await archive_channel.send(content=f" In {message.channel.mention} pinned by {payload.member.name}",
                                    embed=embed)
 
-
-@bot.event
-async def on_guild_join(guild):
-    # TODO: Add guild to database
-    pass
-
-
-@bot.event
-async def on_guild_remove(guild):
-    # TODO: Remove guild from database
-    pass
 
 @bot.event
 async def on_error(event, *args, **kwargs):
@@ -231,37 +231,36 @@ async def here(ctx):
 
     db_insert_channel(bot.connection, str(server_id), str(channel_id), channel_name)
 
-    with open("server_prefs.txt", 'w') as prefs:
-        for pref in pref_array:
-            if pref != "\n" and int(pref.split("|")[0]) == server_id:  # if reached an existing entry
-                pref_array[pref_array.index(pref)] = f'{server_id}|{channel_id}|{server_name}|{channel_name}\n'
-                prefs.writelines(pref_array)
-                await ctx.send("Done.")
-                return
-
-        # if made it here then there is no empty newline, only write at end of file
-        new_pref = f'{server_id}|{channel_id}|{server_name}|{channel_name}\n'
-        pref_array.append(new_pref)
-        prefs.writelines(pref_array)
-        await ctx.send("Done.")
-        return
+    await ctx.send("Done.")
 
 
 @bot.command(name='nothere', help="Unsets this channel as your repost channel.")
 async def nothere(ctx):
     await ctx.send("Unsetting this channel...")
-    channel_id = ctx.message.channel.id
     server_id = ctx.message.guild.id
-
-    print("Server ID: ", server_id)
 
     db_delete_channel(bot.connection, str(server_id))
 
-    with open("server_prefs.txt", "w") as prefs:
-        for pref in pref_array:
-            if pref != "\n" and int(pref.split("|")[1]) == channel_id:
-                pref_array.remove(pref)
-                prefs.writelines(pref_array)
+    await ctx.send("Done.")
+
+
+@bot.command(name='archive', help='sets this channel as archive channel')
+async def archive(ctx):
+    await ctx.send("Setting this channel as archive...")
+    server_id = ctx.message.guild.id
+    channel_id = ctx.message.channel.id
+
+    db_archive(bot.connection, str(server_id), str(channel_id))
+
+    await ctx.send("Done.")
+
+
+@bot.command(name='notarchive', help='unsets this channel as archive channel')
+async def notarchive(ctx):
+    await ctx.send("Unsetting this channel...")
+    server_id = ctx.message.guild.id
+
+    db_not_archive(bot.connection, str(server_id))
 
     await ctx.send("Done.")
 
@@ -269,8 +268,7 @@ async def nothere(ctx):
 @bot.command(name='test', help="testing this command")
 async def test(ctx):
 
-    records = db_startup(bot.connection)
-    print(records)
+    print(pref_array)
     await ctx.send("Test program run.")
 
 
