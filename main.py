@@ -7,6 +7,7 @@ import constants
 import psycopg2
 from datetime import datetime
 from bot import Bot
+from storage import *
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -30,7 +31,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("implementing database methods")
+    game = discord.Game("undergoing core storage system changes. Some functions disabled.")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     with open("server_prefs.txt", "r") as prefs:
@@ -177,6 +178,17 @@ async def on_raw_reaction_add(payload):
 
 
 @bot.event
+async def on_guild_join(guild):
+    # TODO: Add guild to database
+    pass
+
+
+@bot.event
+async def on_guild_remove(guild):
+    # TODO: Remove guild from database
+    pass
+
+@bot.event
 async def on_error(event, *args, **kwargs):
     with open('err.log', 'a') as f:
         if event == 'on_message':
@@ -217,6 +229,8 @@ async def here(ctx):
     channel_id = ctx.message.channel.id
     channel_name = ctx.message.channel
 
+    db_insert_channel(bot.connection, str(server_id), str(channel_id), channel_name)
+
     with open("server_prefs.txt", 'w') as prefs:
         for pref in pref_array:
             if pref != "\n" and int(pref.split("|")[0]) == server_id:  # if reached an existing entry
@@ -237,6 +251,11 @@ async def here(ctx):
 async def nothere(ctx):
     await ctx.send("Unsetting this channel...")
     channel_id = ctx.message.channel.id
+    server_id = ctx.message.guild.id
+
+    print("Server ID: ", server_id)
+
+    db_delete_channel(bot.connection, str(server_id))
 
     with open("server_prefs.txt", "w") as prefs:
         for pref in pref_array:
@@ -245,6 +264,14 @@ async def nothere(ctx):
                 prefs.writelines(pref_array)
 
     await ctx.send("Done.")
+
+
+@bot.command(name='test', help="testing this command")
+async def test(ctx):
+
+    records = db_startup(bot.connection)
+    print(records)
+    await ctx.send("Test program run.")
 
 
 bot.run(TOKEN)
