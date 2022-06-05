@@ -31,7 +31,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("undergoing core storage system changes. Some functions disabled.")
+    game = discord.Game("Completed migration to PostgreSQL.")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     global pref_array
@@ -39,14 +39,17 @@ async def on_ready():
 
 
 @bot.event
-async def on_guild_join():
+async def on_guild_join(guild):
     print("Joined new server.")
+    db_add_server(bot.connection, str(guild.id), guild.name)
 
 
 @bot.event
 async def on_guild_remove(guild):
     # TODO: Remove guild from database
-    pass
+    db_remove_server(bot.connection, str(guild.id))
+    print("Left server.")
+
 
 """
 @bot.event
@@ -62,6 +65,9 @@ async def on_member_join(member):
 async def on_message(message):
 
     if message.author == bot.user:
+        return
+
+    if message.author.id == 249621513030991873:
         return
 
     if message.channel.id == constants.CHANNEL:  # This is where the bot copies everything I say
@@ -101,7 +107,8 @@ async def on_message(message):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     if bot.user.mentioned_in(message):  # action on being mentioned
-        await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
+        #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
+        await message.channel.send("My prefix is //")
 
     if not message.guild:
         try:

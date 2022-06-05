@@ -31,7 +31,6 @@ def db_update(connection):
     return records
 
 
-# TODO: Add function DB QUERY
 def db_add_server(connection, server_id: str, server_name: str):
     """Adds entirely new server to database."""
     try:
@@ -43,6 +42,20 @@ def db_add_server(connection, server_id: str, server_name: str):
 
     except Exception as error:
         print("Error in inserting to database, ", error)
+        connection.rollback()
+
+
+def db_remove_server(connection, server_id: str):
+    """Removes server from database."""
+    try:
+        cursor = connection.cursor()
+        query = f"DELETE FROM server_prefs WHERE server_id = '{server_id}'"
+        cursor.execute(query)
+        connection.commit()
+        print("Removed row from database.")
+
+    except Exception as error:
+        print("Error in removing from database, ", error)
         connection.rollback()
 
 
