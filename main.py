@@ -31,7 +31,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("Completed migration to PostgreSQL.")
+    game = discord.Game("DM me random bot features.")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     global pref_array
@@ -67,9 +67,6 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    if message.author.id == 249621513030991873:
-        return
-
     if message.channel.id == constants.CHANNEL:  # This is where the bot copies everything I say
         await message.channel.send("Heard.")
 
@@ -88,6 +85,11 @@ async def on_message(message):
 
     if message.content == 'raise exception':
         raise discord.DiscordException
+
+    if "sus" in message.content.lower():
+        roll = random.randint(1, 3)
+        if roll == 1:
+            await message.channel.send("<a:RockEyebrow:970449809121112096>")
 
     if re.match(r'(?i).*amog.*', message.content) and message.channel.id not in spam_protection:
         roll = random.randint(1, 3)
@@ -108,7 +110,12 @@ async def on_message(message):
 
     if bot.user.mentioned_in(message):  # action on being mentioned
         #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
-        await message.channel.send("My prefix is //")
+        if message.channel.id in spam_protection:
+            await message.channel.send("My prefix is //")
+        else:
+            await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
+            await asyncio.sleep(120)
+            spam_protection.remove(message.channel.id)
 
     if not message.guild:
         try:
