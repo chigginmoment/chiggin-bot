@@ -79,7 +79,7 @@ def db_delete_channel(connection, server_id: str):
     """Deletes the entry with server id = server_id from database."""
     try:
         cursor = connection.cursor()
-        print(server_id)
+        # print(server_id)
         query = f"UPDATE server_prefs SET channel=NULL, channel_name=NULL WHERE server_id = '{server_id}'"
         cursor.execute(query)
         connection.commit()

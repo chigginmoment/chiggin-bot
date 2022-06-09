@@ -31,11 +31,12 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("DM me random bot features.")
+    game = discord.Game("hating Instagram Reels")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     global pref_array
     pref_array = db_update(bot.connection)
+    print("Ready on ", datetime.now())
 
 
 @bot.event
@@ -114,7 +115,7 @@ async def on_message(message):
             await message.channel.send("My prefix is //")
         else:
             await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
-            await asyncio.sleep(120)
+            await asyncio.sleep(300)
             spam_protection.remove(message.channel.id)
 
     if not message.guild:
@@ -131,7 +132,7 @@ async def on_message(message):
                 return ("yes" in m.content.lower() or "no" in m.content.lower()) and m.author == message.author
 
             msg = await bot.wait_for('message', timeout=20.0, check=check)
-            # print(f'{message.author} said {message.content} on {message.created_at}')
+  
             if "yes" in msg.content.lower():
                 await message.channel.send("Thanks, I'll consider your feedback.")
                 with open("feedback.txt", "a") as f:
@@ -156,16 +157,15 @@ async def on_raw_reaction_add(payload):
     message = await react_chan.fetch_message(payload.message_id)
     reaction = get(message.reactions, emoji=payload.emoji.name)
 
-    # print(payload.emoji.name == "😭")
-
     flag = False
     for pref in pref_array:
-        if message.channel.id == pref[1]:
+        if str(message.channel.id) == pref[1]:
             flag = True
 
-    if message.author == bot.user and payload.emoji.name == "♻️" and flag:
+    if message.author == bot.user and payload.emoji.name == constants.REPOST_EMOTE and flag:
         if reaction and reaction.count >= 3:
             await message.delete()
+            print("User voted repost deleted.")
 
     elif payload.emoji.name == constants.ARCHIVE_EMOTE and reaction.count < 2:
         # This will become able to set on a per-server basis
@@ -206,7 +206,7 @@ async def on_raw_reaction_add(payload):
 async def on_error(event, *args, **kwargs):
     with open('err.log', 'a') as f:
         if event == 'on_message':
-            f.write(f'Unhandled message: {args[0]}\n')
+            f.write(f'Unhandled message: {args[0]} at time {datetime.now()}\n')
         else:
             raise
 
@@ -244,6 +244,7 @@ async def here(ctx):
     channel_name = ctx.message.channel
 
     db_insert_channel(bot.connection, str(server_id), str(channel_id), channel_name)
+    db_update(bot.connection)
 
     await ctx.send("Done.")
 
@@ -254,6 +255,7 @@ async def nothere(ctx):
     server_id = ctx.message.guild.id
 
     db_delete_channel(bot.connection, str(server_id))
+    db_update(bot.connection)
 
     await ctx.send("Done.")
 
