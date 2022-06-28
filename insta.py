@@ -9,9 +9,6 @@ SESSIONID = "3312752481%3AkoU7sojpWCHwro%3A11"
  
 # Header with session id
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)\
-    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.74 \
-    Safari/537.36 Edg/79.0.309.43",
     "cookie": f'sessionid={SESSIONID};'
 }
  

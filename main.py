@@ -31,7 +31,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("hating Instagram Reels")
+    game = discord.Game("a game")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     global pref_array
@@ -96,7 +96,7 @@ async def on_message(message):
         roll = random.randint(1, 3)
         if roll == 1:
             spam_protection.append(message.channel.id)
-            await message.channel.send("sus")
+            await message.channel.send(random.choice(constants.AMOGUS_GIFS))
             await asyncio.sleep(20)
             spam_protection.remove(message.channel.id)
 
@@ -189,9 +189,12 @@ async def on_raw_reaction_add(payload):
             main_picture = main_embed.image.url
             embed.set_image(url=main_picture)
 
-            embed.add_field(name=main_embed.author.name, value=main_embed.description, inline=False)
-            for field in main_embed.fields:
-                embed.add_field(name=field.name, value=field.value, inline=field.inline)
+            if main_embed.type == "image":
+                embed.set_image(url=main_embed.url)
+            elif main_embed.type == "rich":
+                embed.add_field(name=main_embed.author.name, value=main_embed.description, inline=False)
+                for field in main_embed.fields:
+                    embed.add_field(name=field.name, value=field.value, inline=field.inline)
 
         if message.attachments:
             embed.set_image(url=message.attachments[0].url)  # No idea how to put multiple images in an embed
