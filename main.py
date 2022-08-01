@@ -87,13 +87,18 @@ async def on_message(message):
     if message.content == 'raise exception':
         raise discord.DiscordException
 
-    if "sus" in message.content.lower():
-        roll = random.randint(1, 3)
+    # print(re.match(r"(?i)(^sus )|(.* sus$)|(.* sus .*)|(^sus$)", message.content), message.content)
+
+    if re.match(r"(?i)(^sus )|(.* sus$)|(.* sus .*)|(^sus$)", message.content) and message.channel.id not in spam_protection:
+        roll = random.randint(1, 5)
         if roll == 1:
+            spam_protection.append(message.channel.id)
             await message.channel.send("<a:RockEyebrow:970449809121112096>")
+            await asyncio.sleep(20)
+            spam_protection.remove(message.channel.id)
 
     if re.match(r'(?i).*amog.*', message.content) and message.channel.id not in spam_protection:
-        roll = random.randint(1, 3)
+        roll = random.randint(1, 5)
         if roll == 1:
             spam_protection.append(message.channel.id)
             await message.channel.send(random.choice(constants.AMOGUS_GIFS))
@@ -115,7 +120,7 @@ async def on_message(message):
             await message.channel.send("My prefix is //")
         else:
             await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
-            await asyncio.sleep(300)
+            await asyncio.sleep(3600)
             spam_protection.remove(message.channel.id)
 
     if not message.guild:
@@ -209,11 +214,11 @@ async def on_raw_reaction_add(payload):
 async def on_error(event, *args, **kwargs):
     with open('err.log', 'a') as f:
         if event == 'on_message':
-            f.write(f'Unhandled message: {args[0]} at time {datetime.now()}\n')
+            f.write(f'Unhandled message content {args[0]} at time {datetime.now()}\n')
         else:
             raise
 
-
+ 
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
