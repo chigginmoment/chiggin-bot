@@ -8,6 +8,8 @@ import psycopg2
 from datetime import datetime
 from bot import Bot
 from storage import *
+import reel_helper
+import shutil
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -94,7 +96,7 @@ async def on_message(message):
         if roll == 1:
             spam_protection.append(message.channel.id)
             await message.channel.send("<a:RockEyebrow:970449809121112096>")
-            await asyncio.sleep(20)
+            await asyncio.sleep(800)
             spam_protection.remove(message.channel.id)
 
     if re.match(r'(?i).*amog.*', message.content) and message.channel.id not in spam_protection:
@@ -102,17 +104,34 @@ async def on_message(message):
         if roll == 1:
             spam_protection.append(message.channel.id)
             await message.channel.send(random.choice(constants.AMOGUS_GIFS))
-            await asyncio.sleep(20)
+            await asyncio.sleep(800)
             spam_protection.remove(message.channel.id)
 
     if re.match(r'(?i).*ragnar.*', message.content) and message.channel.id not in spam_protection:
         spam_protection.append(message.channel.id)
         await message.channel.send(constants.RAGNAR)
-        await asyncio.sleep(180)
+        await asyncio.sleep(1800)
         spam_protection.remove(message.channel.id)
 
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
+
+    if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):
+        post_id = reel_helper.download(message.content).strip()
+        print("Downloaded Instagram post: ", post_id)
+        for file in os.listdir(f"{post_id}"):
+            if file.endswith(".mp4"):
+                print(f"{post_id}/{file}")
+                await message.channel.send(file=discord.File(f"{post_id}/{file}"))
+                print("Uploaded reel")
+                break
+        
+        try:
+            shutil.rmtree(post_id)
+            print("Successfully removed Instagram post")
+        except OSError as e:
+            print("Error: ", e)
+            
 
     if bot.user.mentioned_in(message):  # action on being mentioned
         #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
@@ -135,7 +154,6 @@ async def on_message(message):
 
             def check(m):
                 return ("yes" in m.content.lower() or "no" in m.content.lower()) and m.author == message.author
-
             msg = await bot.wait_for('message', timeout=20.0, check=check)
   
             if "yes" in msg.content.lower():
