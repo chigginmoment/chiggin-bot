@@ -110,20 +110,24 @@ async def on_message(message):
     if re.match(r'(?i).*ragnar.*', message.content) and message.channel.id not in spam_protection:
         spam_protection.append(message.channel.id)
         await message.channel.send(constants.RAGNAR)
-        await asyncio.sleep(1800)
+        await asyncio.sleep(84600)
         spam_protection.remove(message.channel.id)
 
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):
+        print("detected post")
         post_id = reel_helper.download(message.content).strip()
         print("Downloaded Instagram post: ", post_id)
         for file in os.listdir(f"{post_id}"):
             if file.endswith(".mp4"):
                 print(f"{post_id}/{file}")
-                await message.channel.send(file=discord.File(f"{post_id}/{file}"))
-                print("Uploaded reel")
+                try:
+                    await message.channel.send(file=discord.File(f"{post_id}/{file}"))
+                    print("Uploaded reel")
+                except Exception as e:
+                    print("Uploading reel failed: ", e)
                 break
         
         try:
@@ -135,15 +139,17 @@ async def on_message(message):
 
     if bot.user.mentioned_in(message):  # action on being mentioned
         #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
-        if message.channel.id in spam_protection:
+        if "mention" in spam_protection:
             await message.channel.send("My prefix is //")
         else:
+            spam_protection.append("mention")
             await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
-            await asyncio.sleep(3600)
-            spam_protection.remove(message.channel.id)
+            await asyncio.sleep(14400)
+            spam_protection.remove("mention")
 
     if not message.guild:
         try:
+            
             if message.author.id in awaiting_response:
                 return
             else:
@@ -270,7 +276,9 @@ async def here(ctx):
     channel_name = ctx.message.channel
 
     db_insert_channel(bot.connection, str(server_id), str(channel_id), channel_name)
-    db_update(bot.connection)
+
+    global pref_array
+    pref_array = db_update(bot.connection)
 
     await ctx.send("Done.")
 
@@ -281,7 +289,9 @@ async def nothere(ctx):
     server_id = ctx.message.guild.id
 
     db_delete_channel(bot.connection, str(server_id))
-    db_update(bot.connection)
+
+    global pref_array
+    pref_array = db_update(bot.connection)
 
     await ctx.send("Done.")
 
@@ -294,6 +304,9 @@ async def archive(ctx):
 
     db_archive(bot.connection, str(server_id), str(channel_id))
 
+    global pref_array
+    pref_array = db_update(bot.connection)
+
     await ctx.send("Done.")
 
 
@@ -304,13 +317,17 @@ async def notarchive(ctx):
 
     db_not_archive(bot.connection, str(server_id))
 
+    global pref_array
+    pref_array = db_update(bot.connection)
+
     await ctx.send("Done.")
 
 
 @bot.command(name='test', help="testing this command")
 async def test(ctx):
 
-    print(pref_array)
+    # print(pref_array)
+    print(spam_protection)
     await ctx.send("Test program run.")
 
 
