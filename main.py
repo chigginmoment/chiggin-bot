@@ -33,7 +33,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("a game")
+    game = discord.Game("around")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     global pref_array
@@ -124,10 +124,11 @@ async def on_message(message):
             if file.endswith(".mp4"):
                 print(f"{post_id}/{file}")
                 try:
-                    await message.channel.send(file=discord.File(f"{post_id}/{file}"))
+                    await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
                     print("Uploaded reel")
                 except Exception as e:
-                    print("Uploading reel failed: ", e)
+                    await message.reply("Reel embed failed: "+ e)
+                    print("Uploading reel failed: "+ e)
                 break
         
         try:
@@ -192,7 +193,7 @@ async def on_raw_reaction_add(payload):
             flag = True
 
     if message.author == bot.user and payload.emoji.name == constants.REPOST_EMOTE and flag:
-        if reaction and reaction.count >= 3:
+        if reaction and reaction.count >= 1:
             await message.delete()
             print("User voted repost deleted.")
 
