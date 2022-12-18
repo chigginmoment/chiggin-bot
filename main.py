@@ -33,7 +33,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("around")
+    game = discord.Game("with myself")
     await bot.change_presence(status=discord.Status.online, activity=game)
 
     global pref_array
@@ -117,6 +117,17 @@ async def on_message(message):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):
+
+        # print("amogus")
+
+        # reply = await asyncio.to_thread(reel_helper.post_reel, message=message)
+
+        # if reply == -1:
+        #     await message.reply("Reel embed failed", mention_author=False)
+        # else:
+        #     await message.reply(file=discord.File(reply), mention_author=False)
+
+        
         print("detected post")
         post_id = reel_helper.download(message.content).strip()
         print("Downloaded Instagram post: ", post_id)
@@ -124,8 +135,12 @@ async def on_message(message):
             if file.endswith(".mp4"):
                 print(f"{post_id}/{file}")
                 try:
-                    await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
-                    print("Uploaded reel")
+                    if os.path.getsize(f"{post_id}/{file}") > 8388608:
+                        await message.reply("Reel embed failed: file too large. Compression coming soontm.")
+                        print("Uploading reel failed: Reel too large.")
+                    else:
+                        await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
+                        print("Uploaded reel")
                 except Exception as e:
                     await message.reply("Reel embed failed: "+ e)
                     print("Uploading reel failed: "+ e)
@@ -137,7 +152,6 @@ async def on_message(message):
         except OSError as e:
             print("Error: ", e)
             
-
     if bot.user.mentioned_in(message):  # action on being mentioned
         #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
         if "mention" in spam_protection:
