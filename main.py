@@ -116,18 +116,7 @@ async def on_message(message):
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
-    if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):
-
-        # print("amogus")
-
-        # reply = await asyncio.to_thread(reel_helper.post_reel, message=message)
-
-        # if reply == -1:
-        #     await message.reply("Reel embed failed", mention_author=False)
-        # else:
-        #     await message.reply(file=discord.File(reply), mention_author=False)
-
-        
+    if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):    
         print("detected post")
         post_id = reel_helper.download(message.content).strip()
         print("Downloaded Instagram post: ", post_id)
@@ -151,6 +140,11 @@ async def on_message(message):
             print("Successfully removed Instagram post")
         except OSError as e:
             print("Error: ", e)
+
+    if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", message.content):
+        url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", message.content).group(2)
+        if message.embeds[0].video:
+            await message.add_reaction(constants.TWITTER_EMOTE)
             
     if bot.user.mentioned_in(message):  # action on being mentioned
         #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
@@ -196,7 +190,7 @@ async def on_message(message):
 
 @bot.event
 async def on_raw_reaction_add(payload):
-    """Checks posts for 3 ♻ reaction in order to manage reposts."""
+    """Checks posts for 1 ♻ reaction in order to manage reposts."""
     react_chan = bot.get_channel(payload.channel_id)
     message = await react_chan.fetch_message(payload.message_id)
     reaction = get(message.reactions, emoji=payload.emoji.name)
@@ -210,6 +204,19 @@ async def on_raw_reaction_add(payload):
         if reaction and reaction.count >= 1:
             await message.delete()
             print("User voted repost deleted.")
+
+    elif payload.emoji.name == constants.TWITTER_EMOTE and payload.channel_id not in spam_protection:
+        if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", message.content):
+            if message.embeds and message.embeds[0].video:
+                url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", message.content).group(2)
+                await message.reply("https://vx" + url, mention_author=False)
+            else:
+                await message.channel.send("I found a Twitter link but not a video embed.\
+                If you want to include this functionality, let me know.")
+            spam_protection.append(payload.channel_id)
+            await asyncio.sleep(600)
+            spam_protection.remove(payload.channel_id)
+
 
     elif payload.emoji.name == constants.ARCHIVE_EMOTE and reaction.count < 2:
         # This will become able to set on a per-server basis
@@ -342,8 +349,8 @@ async def notarchive(ctx):
 async def test(ctx):
 
     # print(pref_array)
-    print(spam_protection)
-    await ctx.send("Test program run.")
+    print("This works")
+    await ctx.send("Testing works Dec 19")
 
 
 bot.run(TOKEN)
