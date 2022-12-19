@@ -124,9 +124,10 @@ async def on_message(message):
             if file.endswith(".mp4"):
                 print(f"{post_id}/{file}")
                 try:
-                    if os.path.getsize(f"{post_id}/{file}") > 8388608:
-                        await message.reply("Reel embed failed: file too large. Compression coming soontm.")
-                        print("Uploading reel failed: Reel too large.")
+                    reel_size = os.path.getsize(f"{post_id}/{file}")
+                    if  reel_size > 8388608:
+                        await message.reply("Uploading reel failed: Reel too large at size: ", reel_size, "bytes.")
+                        print("Uploading reel failed: Reel too large at size: ", reel_size)
                     else:
                         await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
                         print("Uploaded reel")
@@ -143,7 +144,7 @@ async def on_message(message):
 
     if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", message.content):
         url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", message.content).group(2)
-        if message.embeds[0].video:
+        if message.embeds and message.embeds[0].video:
             await message.add_reaction(constants.TWITTER_EMOTE)
             
     if bot.user.mentioned_in(message):  # action on being mentioned
@@ -189,11 +190,23 @@ async def on_message(message):
 
 
 @bot.event
+async def on_message_edit(before, after):
+    if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", after.content):
+        url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", after.content).group(2)
+        if after.embeds and after.embeds[0].video:
+            await after.add_reaction(constants.TWITTER_EMOTE)
+
+
+@bot.event
 async def on_raw_reaction_add(payload):
     """Checks posts for 1 ♻ reaction in order to manage reposts."""
     react_chan = bot.get_channel(payload.channel_id)
     message = await react_chan.fetch_message(payload.message_id)
     reaction = get(message.reactions, emoji=payload.emoji.name)
+    user = payload.user_id
+
+    if user == bot.user.id:
+        return
 
     flag = False
     for pref in pref_array:
@@ -205,7 +218,7 @@ async def on_raw_reaction_add(payload):
             await message.delete()
             print("User voted repost deleted.")
 
-    elif payload.emoji.name == constants.TWITTER_EMOTE and payload.channel_id not in spam_protection:
+    elif payload.emoji.name == constants.TWITTER_EMOTE and payload.message_id not in spam_protection:
         if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", message.content):
             if message.embeds and message.embeds[0].video:
                 url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", message.content).group(2)
@@ -213,9 +226,9 @@ async def on_raw_reaction_add(payload):
             else:
                 await message.channel.send("I found a Twitter link but not a video embed.\
                 If you want to include this functionality, let me know.")
-            spam_protection.append(payload.channel_id)
+            spam_protection.append(payload.message_id)
             await asyncio.sleep(600)
-            spam_protection.remove(payload.channel_id)
+            spam_protection.remove(payload.message_id)
 
 
     elif payload.emoji.name == constants.ARCHIVE_EMOTE and reaction.count < 2:
@@ -260,7 +273,7 @@ async def on_raw_reaction_add(payload):
 async def on_error(event, *args, **kwargs):
     with open('err.log', 'a') as f:
         if event == 'on_message':
-            f.write(f'Unhandled message content {args[0]} at time {datetime.now()}\n')
+            f.write(f'Unhandled message error: {args[0]} at time {datetime.now()}\n')
         else:
             raise
 
