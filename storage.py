@@ -130,6 +130,18 @@ def db_not_archive(connection, server_id: str):
         connection.rollback()
 
 
+def db_nuisance(connection, server_id: str):
+    try:
+        cursor = connection.cursor()
+        query = f"UPDATE server_prefs SET no_chance = NOT no_chance WHERE server_id = '{server_id}'"
+        cursor.execute(query)
+        connection.commit()
+        print("Toggle nuisance.")
+    except Exception as error:
+        print("Error in toggling: ", error)
+        connection.rollback()
+
+
 def db_disconnect(connection):
     """Disconnects from database for clean exit."""
 

@@ -19,7 +19,7 @@ def download(link):
     print("Begin download.")
     post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", link).group(1).strip()
 
-    print("Post short: ", post_short)
+    # print("Post short: ", post_short)
 
     post = instaloader.Post.from_shortcode(L.context, post_short)
 

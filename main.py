@@ -67,6 +67,13 @@ async def on_member_join(member):
 @bot.event
 async def on_message(message):
 
+    nuisance = False
+
+    for pref in pref_array:
+        # print(pref[0], str(message.guild.id), pref[0] == str(message.guild.id))
+        if pref[0] == str(message.guild.id) and pref[5]:
+            nuisance = True
+
     if message.author == bot.user:
         return
 
@@ -93,31 +100,34 @@ async def on_message(message):
 
     if re.match(r"(?i)(^sus )|(.* sus$)|(.* sus .*)|(^sus$)", message.content) and message.channel.id not in spam_protection:
         roll = random.randint(1, 5)
-        if roll == 1:
-            spam_protection.append(message.channel.id)
+        if roll == 1 or nuisance:
             await message.channel.send("<a:RockEyebrow:970449809121112096>")
-            await asyncio.sleep(800)
-            spam_protection.remove(message.channel.id)
+            if not nuisance:
+                spam_protection.append(message.channel.id)
+                await asyncio.sleep(800)
+                spam_protection.remove(message.channel.id)
 
     if re.match(r'(?i).*amog.*', message.content) and message.channel.id not in spam_protection:
         roll = random.randint(1, 5)
-        if roll == 1:
-            spam_protection.append(message.channel.id)
+        if roll == 1 or nuisance:
             await message.channel.send(random.choice(constants.AMOGUS_GIFS))
-            await asyncio.sleep(800)
-            spam_protection.remove(message.channel.id)
+            if not nuisance:
+                spam_protection.append(message.channel.id)
+                await asyncio.sleep(800)
+                spam_protection.remove(message.channel.id)
 
     if re.match(r'(?i).*ragnar.*', message.content) and message.channel.id not in spam_protection:
-        spam_protection.append(message.channel.id)
         await message.channel.send(constants.RAGNAR)
-        await asyncio.sleep(84600)
-        spam_protection.remove(message.channel.id)
+        if not nuisance:
+            spam_protection.append(message.channel.id)
+            await asyncio.sleep(800)
+            spam_protection.remove(message.channel.id)
 
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):    
-        print("detected post")
+        # print("detected post")
         post_id = reel_helper.download(message.content).strip()
         print("Downloaded Instagram post: ", post_id)
         for file in os.listdir(f"{post_id}"):
@@ -125,8 +135,9 @@ async def on_message(message):
                 print(f"{post_id}/{file}")
                 try:
                     reel_size = os.path.getsize(f"{post_id}/{file}")
+                    print("Reel size:", reel_size)
                     if  reel_size > 8388608:
-                        await message.reply("Uploading reel failed: Reel too large at size: ", reel_size, "bytes.")
+                        await message.reply(f"Uploading reel failed: Reel too large at size: {reel_size} bytes. Compression coming soontm.", mention_author=False)
                         print("Uploading reel failed: Reel too large at size: ", reel_size)
                     else:
                         await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
@@ -213,12 +224,12 @@ async def on_raw_reaction_add(payload):
         if str(message.channel.id) == pref[1]:
             flag = True
 
-    if message.author == bot.user and payload.emoji.name == constants.REPOST_EMOTE and flag:
+    if message.author == bot.user and payload.emoji.name == constants.REPOST_EMOTE:
         if reaction and reaction.count >= 1:
             await message.delete()
             print("User voted repost deleted.")
 
-    elif payload.emoji.name == constants.TWITTER_EMOTE and payload.message_id not in spam_protection:
+    elif payload.emoji.name == constants.TWITTER_EMOTE and payload.message_id not in spam_protection and reaction.count <=2:
         if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", message.content):
             if message.embeds and message.embeds[0].video:
                 url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", message.content).group(2)
@@ -358,12 +369,30 @@ async def notarchive(ctx):
     await ctx.send("Done.")
 
 
+@bot.command(name='nuisance', help='How annoying do you want me to be?')
+@commands.has_permissions(administrator=True)
+async def nuisance(ctx):
+    global pref_array
+    server_id = ctx.message.guild.id
+    nuisance = False
+    for pref in pref_array:
+        if pref[0] == str(ctx.guild.id) and pref[5]:
+            nuisance = True
+    
+    db_nuisance(bot.connection, str(server_id))
+    if nuisance:
+        await ctx.send("Quieting down.")
+    else:
+        await ctx.send("If you say so.")
+
+    
+    pref_array = db_update(bot.connection)
+
+
 @bot.command(name='test', help="testing this command")
 async def test(ctx):
-
     # print(pref_array)
-    print("This works")
-    await ctx.send("Testing works Dec 19")
+    await ctx.send("This doesn't do anything at the moment.")
 
 
 bot.run(TOKEN)
