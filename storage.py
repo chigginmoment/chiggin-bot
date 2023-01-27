@@ -47,8 +47,8 @@ def db_add_server(connection, server_id: str, server_name: str):
     """Adds entirely new server to database."""
     try:
         cursor = connection.cursor()
-        query = f"INSERT INTO server_prefs (server_id, server_name, no_chance) VALUES ('{server_id}', '{server_name}', FALSE)"
-        cursor.execute(query)
+        query = "INSERT INTO server_prefs (server_id, server_name, no_chance) VALUES (%s, %s, FALSE)"
+        cursor.execute(query, (server_id, server_name))
         connection.commit()
         print("Inserted new row into database.")
 
@@ -61,8 +61,8 @@ def db_remove_server(connection, server_id: str):
     """Removes server from database."""
     try:
         cursor = connection.cursor()
-        query = f"DELETE FROM server_prefs WHERE server_id = '{server_id}'"
-        cursor.execute(query)
+        query = "DELETE FROM server_prefs WHERE server_id = %s"
+        cursor.execute(query, (server_id,))
         connection.commit()
         print("Removed row from database.")
 
@@ -76,8 +76,8 @@ def db_insert_channel(connection, server_id: str, channel_id: str, channel_name:
     """Inserts a new server entry into connected database. Inserts only the data provided in the argument."""
     try:
         cursor = connection.cursor()
-        query = f"UPDATE server_prefs SET channel = '{channel_id}', channel_name = '{channel_name}' WHERE server_id = '{server_id}'"
-        cursor.execute(query)
+        query = "UPDATE server_prefs SET channel = %s, channel_name = %s WHERE server_id = %s"
+        cursor.execute(query, (channel_id, channel_name, server_id))
         connection.commit()
         print("Updated channel in database.")
 
@@ -92,8 +92,8 @@ def db_delete_channel(connection, server_id: str):
     try:
         cursor = connection.cursor()
         # print(server_id)
-        query = f"UPDATE server_prefs SET channel=NULL, channel_name=NULL WHERE server_id = '{server_id}'"
-        cursor.execute(query)
+        query = "UPDATE server_prefs SET channel=NULL, channel_name=NULL WHERE server_id = %s"
+        cursor.execute(query, (server_id,))
         connection.commit()
         print("Updated database record.")
     except Exception as error:
@@ -105,8 +105,8 @@ def db_fetch_archive(connection, server_id: str):
     """Fetches archive channel of server with id server_id"""
     try:
         cursor = connection.cursor()
-        query = f"SELECT archive FROM server_prefs WHERE server_id = '{server_id}'"
-        cursor.execute(query)
+        query = "SELECT archive FROM server_prefs WHERE server_id = %s"
+        cursor.execute(query, (server_id,))
         connection.commit()
         channel = cursor.fetchone()
         print("Fetched archive channel: ", channel[0])
@@ -121,8 +121,8 @@ def db_fetch_archive(connection, server_id: str):
 def db_archive(connection, server_id: str, archive: str):
     try:
         cursor = connection.cursor()
-        query = f"UPDATE server_prefs SET archive = '{archive}' WHERE server_id = '{server_id}'"
-        cursor.execute(query)
+        query = "UPDATE server_prefs SET archive = %s WHERE server_id = %s"
+        cursor.execute(query, (archive, server_id))
         connection.commit()
         print("Set new archive.")
     except Exception as error:
@@ -133,8 +133,8 @@ def db_archive(connection, server_id: str, archive: str):
 def db_not_archive(connection, server_id: str):
     try:
         cursor = connection.cursor()
-        query = f"UPDATE server_prefs SET archive = NULL WHERE server_id = '{server_id}'"
-        cursor.execute(query)
+        query = "UPDATE server_prefs SET archive = NULL WHERE server_id = %s"
+        cursor.execute(query, (server_id,))
         connection.commit()
         print("Unset archive.")
     except Exception as error:
@@ -145,8 +145,8 @@ def db_not_archive(connection, server_id: str):
 def db_nuisance(connection, server_id: str):
     try:
         cursor = connection.cursor()
-        query = f"UPDATE server_prefs SET no_chance = NOT no_chance WHERE server_id = '{server_id}'"
-        cursor.execute(query)
+        query = "UPDATE server_prefs SET no_chance = NOT no_chance WHERE server_id = %s"
+        cursor.execute(query, (server_id,))
         connection.commit()
         print("Toggle nuisance.")
     except Exception as error:
