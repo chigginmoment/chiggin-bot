@@ -30,12 +30,24 @@ def db_update(connection):
     records = cursor.fetchall()
     return records
 
+def db_update_map(connection):
+    """Returns server_prefs as hashmap with key = server_id and value = List of preferences"""
+    pref_map = {}
+    cursor = connection.cursor()
+    query = "SELECT * FROM server_prefs"
+    cursor.execute(query)
+    connection.commit()
+    records = cursor.fetchall()
+    for entry in records:
+        pref_map[entry[0]] = entry[1:]
+
+    return pref_map
 
 def db_add_server(connection, server_id: str, server_name: str):
     """Adds entirely new server to database."""
     try:
         cursor = connection.cursor()
-        query = f"INSERT INTO server_prefs (server_id, server_name) VALUES ('{server_id}', '{server_name}')"
+        query = f"INSERT INTO server_prefs (server_id, server_name, no_chance) VALUES ('{server_id}', '{server_name}', FALSE)"
         cursor.execute(query)
         connection.commit()
         print("Inserted new row into database.")

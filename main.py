@@ -25,6 +25,7 @@ GUILD = os.getenv('DISCORD_SERVER')
 awaiting_response = []
 pref_array = []
 spam_protection = []
+pref_map = {}
 
 @bot.event
 async def on_ready():
@@ -33,25 +34,30 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    game = discord.Game("with myself")
-    await bot.change_presence(status=discord.Status.online, activity=game)
+    activity = discord.Activity(type=discord.ActivityType.watching, name="chiggin break stuff")
+    await bot.change_presence(status=discord.Status.online, activity=activity)
 
-    global pref_array
-    pref_array = db_update(bot.connection)
+    # global pref_array
+    global pref_map
+    # pref_array = db_update(bot.connection)
+    pref_map = db_update_map(bot.connection)
     print("Ready on ", datetime.now())
 
 
 @bot.event
 async def on_guild_join(guild):
+    global pref_map
     print("Joined new server.")
     db_add_server(bot.connection, str(guild.id), guild.name)
+    pref_map = db_update_map(bot.connection)
 
 
 @bot.event
 async def on_guild_remove(guild):
-    # TODO: Remove guild from database
+    global pref_map
     db_remove_server(bot.connection, str(guild.id))
     print("Left server.")
+    pref_map = db_update_map(bot.connection)
 
 
 """
@@ -66,13 +72,9 @@ async def on_member_join(member):
 
 @bot.event
 async def on_message(message):
+    global pref_map
 
-    nuisance = False
-
-    for pref in pref_array:
-        # print(pref[0], str(message.guild.id), pref[0] == str(message.guild.id))
-        if pref[0] == str(message.guild.id) and pref[5]:
-            nuisance = True
+    nuisance = pref_map[str(message.guild.id)][4]
 
     if message.author == bot.user:
         return
@@ -81,11 +83,12 @@ async def on_message(message):
         await message.channel.send("Heard.")
 
         print("Echoing message.")
-        for pref in pref_array:
-            if pref[1] is not None:
-                channel_name = pref[4]
-                print(f"Echoing message in server {pref[3]} in channel {channel_name}")
-                echo_channel = bot.get_channel(int(pref[1]))
+        for pref in pref_map:
+            if pref_map[pref][0] is not None:
+                channel_name = pref_map[pref][3]
+                server_name = pref_map[pref][2]
+                print(f"Echoing message in server {server_name} in channel {channel_name}")
+                echo_channel = bot.get_channel(int(pref_map[pref][0]))
                 if message.content:
                     await echo_channel.send(message.content)
                 if message.attachments:
@@ -95,8 +98,6 @@ async def on_message(message):
 
     if message.content == 'raise exception':
         raise discord.DiscordException
-
-    # print(re.match(r"(?i)(^sus )|(.* sus$)|(.* sus .*)|(^sus$)", message.content), message.content)
 
     if re.match(r"(?i)(^sus )|(.* sus$)|(.* sus .*)|(^sus$)", message.content) and message.channel.id not in spam_protection:
         roll = random.randint(1, 5)
@@ -123,6 +124,13 @@ async def on_message(message):
             await asyncio.sleep(800)
             spam_protection.remove(message.channel.id)
 
+    if re.match(r'(?i).*tromp.*', message.content) and message.channel.id not in spam_protection:
+        await message.channel.send(constants.TROMP)
+        if not nuisance:
+            spam_protection.append(message.channel.id)
+            await asyncio.sleep(800)
+            spam_protection.remove(message.channel.id)
+
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
@@ -137,8 +145,8 @@ async def on_message(message):
                     reel_size = os.path.getsize(f"{post_id}/{file}")
                     print("Reel size:", reel_size)
                     if  reel_size > 8388608:
-                        await message.reply(f"Uploading reel failed: Reel too large at size: {reel_size} bytes. Compression coming soontm.", mention_author=False)
-                        print("Uploading reel failed: Reel too large at size: ", reel_size)
+                        new = await message.reply(f"Uploading reel failed: Reel too large at size: {reel_size} bytes. Compression coming soontm.", mention_author=False)
+                        print("Compressing reel of size: ", reel_size)
                     else:
                         await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
                         print("Uploaded reel")
@@ -219,10 +227,10 @@ async def on_raw_reaction_add(payload):
     if user == bot.user.id:
         return
 
-    flag = False
-    for pref in pref_array:
-        if str(message.channel.id) == pref[1]:
-            flag = True
+    # flag = False              # Check whether the emoji is in the repost art channel
+    # for pref in pref_array:
+    #     if str(message.channel.id) == pref[1]:
+    #         flag = True
 
     if message.author == bot.user and payload.emoji.name == constants.REPOST_EMOTE:
         if reaction and reaction.count >= 1:
@@ -295,14 +303,6 @@ async def on_command_error(ctx, error):
         await ctx.send('You do not have the correct role for this command.')
 
 
-"""
-@bot.command(name='speak', help='it doesnt work')
-@commands.has_role("Torpedo")
-async def speak(ctx):
-    await ctx.send("This function tests role permissions.")
-"""
-
-
 @bot.command(name='pick', help="Picks a number between 2 numbers specified.")
 async def pick_random(ctx, start: int, end: int):
     num = random.randint(start, end)
@@ -314,57 +314,56 @@ async def pick_random(ctx, start: int, end: int):
 
 @bot.command(name='here', help='Send in target channel for reposting.')
 async def here(ctx):
+    global pref_map
     await ctx.send("Setting this channel as this server's default repost channel...")
     server_id = ctx.message.guild.id  # Used to ident server from which this was sent
-    server_name = ctx.message.guild.name
 
     channel_id = ctx.message.channel.id
     channel_name = ctx.message.channel
 
     db_insert_channel(bot.connection, str(server_id), str(channel_id), channel_name)
 
-    global pref_array
-    pref_array = db_update(bot.connection)
+    pref_map = db_update_map(bot.connection)
 
     await ctx.send("Done.")
 
 
 @bot.command(name='nothere', help="Unsets this channel as your repost channel.")
 async def nothere(ctx):
+    global pref_map
     await ctx.send("Unsetting this channel...")
     server_id = ctx.message.guild.id
 
     db_delete_channel(bot.connection, str(server_id))
 
-    global pref_array
-    pref_array = db_update(bot.connection)
+    pref_map = db_update_map(bot.connection)
 
     await ctx.send("Done.")
 
 
 @bot.command(name='archive', help='sets this channel as archive channel')
 async def archive(ctx):
+    global pref_map
     await ctx.send("Setting this channel as archive...")
     server_id = ctx.message.guild.id
     channel_id = ctx.message.channel.id
 
     db_archive(bot.connection, str(server_id), str(channel_id))
 
-    global pref_array
-    pref_array = db_update(bot.connection)
+    pref_map = db_update_map(bot.connection)
 
     await ctx.send("Done.")
 
 
 @bot.command(name='notarchive', help='unsets this channel as archive channel')
 async def notarchive(ctx):
+    global pref_map
     await ctx.send("Unsetting this channel...")
     server_id = ctx.message.guild.id
 
     db_not_archive(bot.connection, str(server_id))
 
-    global pref_array
-    pref_array = db_update(bot.connection)
+    pref_map = db_update_map(bot.connection)
 
     await ctx.send("Done.")
 
@@ -372,27 +371,29 @@ async def notarchive(ctx):
 @bot.command(name='nuisance', help='How annoying do you want me to be?')
 @commands.has_permissions(administrator=True)
 async def nuisance(ctx):
-    global pref_array
+    global pref_map
     server_id = ctx.message.guild.id
-    nuisance = False
-    for pref in pref_array:
-        if pref[0] == str(ctx.guild.id) and pref[5]:
-            nuisance = True
-    
+
+    nuisance = pref_map[str(server_id)][4]
+
     db_nuisance(bot.connection, str(server_id))
     if nuisance:
         await ctx.send("Quieting down.")
     else:
         await ctx.send("If you say so.")
 
-    
-    pref_array = db_update(bot.connection)
+    pref_map = db_update_map(bot.connection)
 
 
 @bot.command(name='test', help="testing this command")
 async def test(ctx):
-    # print(pref_array)
-    await ctx.send("This doesn't do anything at the moment.")
+    global pref_map
+    pref_map = db_update_map(bot.connection)
+    if ctx.message.author.id == constants.CHIGGIN:
+        print(pref_map)
+        await ctx.send("Test run.")
+    else:
+        await ctx.send("No, you can't do that.")
 
 
 bot.run(TOKEN)
