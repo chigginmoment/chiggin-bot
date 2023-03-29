@@ -14,6 +14,7 @@ import shutil
 from discord.ext import commands
 from dotenv import load_dotenv
 from discord.utils import get
+from concurrent.futures import ThreadPoolExecutor
 
 bot = Bot()
 channel = None
@@ -34,7 +35,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    activity = discord.Activity(type=discord.ActivityType.watching, name="chiggin break stuff")
+    activity = discord.Activity(type=discord.ActivityType.watching, name="development in progress")
     await bot.change_presence(status=discord.Status.online, activity=activity)
 
     # global pref_array
@@ -135,8 +136,9 @@ async def on_message(message):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):    
-        # print("detected post")
-        post_id = reel_helper.download(message.content).strip()
+        loop = asyncio.get_event_loop()
+        post_id = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, message.content)
+        post_id = post_id.strip()
         print("Downloaded Instagram post: ", post_id)
         for file in os.listdir(f"{post_id}"):
             if file.endswith(".mp4"):
