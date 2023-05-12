@@ -11,7 +11,7 @@ class Bot(commands.Bot):
     """Override initialization to include database."""
 
     def __init__(self):
-        super().__init__(command_prefix="//", description="am chiggin")
+        super().__init__(command_prefix="//", description="am chiggin", intents=discord.Intents.all())
         self.connection = db_connect()
 
     async def close(self):

@@ -35,7 +35,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    activity = discord.Activity(type=discord.ActivityType.watching, name="development in progress")
+    activity = discord.Activity(type=discord.ActivityType.watching, name="Instagram suspend me")
     await bot.change_presence(status=discord.Status.online, activity=activity)
 
     # global pref_array
@@ -73,6 +73,7 @@ async def on_member_join(member):
 
 @bot.event
 async def on_message(message):
+    # print("On message?")
     global pref_map
 
     nuisance = pref_map[str(message.guild.id)][4]
@@ -135,20 +136,19 @@ async def on_message(message):
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
-    if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):    
+    if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):  
+        await message.add_reaction(constants.LOADING_EMOTE)  
         loop = asyncio.get_event_loop()
         post_id = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, message.content)
         post_id = post_id.strip()
-        print("Downloaded Instagram post: ", post_id)
+        print(f"Downloaded Instagram post: {post_id}")
         for file in os.listdir(f"{post_id}"):
             if file.endswith(".mp4"):
-                print(f"{post_id}/{file}")
                 try:
                     reel_size = os.path.getsize(f"{post_id}/{file}")
                     print("Reel size:", reel_size)
                     if  reel_size > 8388608:
-                        new = await message.reply(f"Uploading reel failed: Reel too large at size: {reel_size} bytes. Compression coming soontm.", mention_author=False)
-                        print("Compressing reel of size: ", reel_size)
+                        new = await message.reply(f"This reel is: {reel_size} bytes. I'm developing compression.", mention_author=False)
                     else:
                         await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
                         print("Uploaded reel")
@@ -156,7 +156,9 @@ async def on_message(message):
                     await message.reply("Reel embed failed: "+ e)
                     print("Uploading reel failed: "+ e)
                 break
-        
+
+        await message.remove_reaction(constants.LOADING_EMOTE, bot.user)
+
         try:
             shutil.rmtree(post_id)
             print("Successfully removed Instagram post")
@@ -216,6 +218,8 @@ async def on_message_edit(before, after):
         url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", after.content).group(2)
         if after.embeds and after.embeds[0].video:
             await after.add_reaction(constants.TWITTER_EMOTE)
+    if re.match(r'.*<:dj:896639618601074689>.*', after.content):
+        await after.channel.send("🐖💨<:gupy:978882222054592553>")
 
 
 @bot.event
@@ -228,11 +232,6 @@ async def on_raw_reaction_add(payload):
 
     if user == bot.user.id:
         return
-
-    # flag = False              # Check whether the emoji is in the repost art channel
-    # for pref in pref_array:
-    #     if str(message.channel.id) == pref[1]:
-    #         flag = True
 
     if message.author == bot.user and payload.emoji.name == constants.REPOST_EMOTE:
         if reaction and reaction.count >= 1:
