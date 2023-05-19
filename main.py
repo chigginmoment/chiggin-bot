@@ -261,7 +261,7 @@ async def on_raw_reaction_add(payload):
 
         embed = discord.Embed(color=0xA9B0FF, title="Message link", url=message.jump_url)
         # embed is spaghetti so FIXME but later
-        embed.set_author(name=message.author.name, icon_url=message.author.avatar_url)
+        embed.set_author(name=message.author.name, icon_url=message.author.avatar)
 
         content = "Image only"
         if message.content:
