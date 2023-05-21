@@ -138,29 +138,35 @@ async def on_message(message):
 
     if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):  
         await message.add_reaction(constants.LOADING_EMOTE)  
+        post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content).group(1).strip()
+        big = False
         loop = asyncio.get_event_loop()
-        post_id = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, message.content)
-        post_id = post_id.strip()
-        print(f"Downloaded Instagram post: {post_id}")
-        for file in os.listdir(f"{post_id}"):
-            if file.endswith(".mp4"):
-                try:
-                    reel_size = os.path.getsize(f"{post_id}/{file}")
-                    print("Reel size:", reel_size)
-                    if  reel_size > 8388608:
-                        new = await message.reply(f"This reel is: {reel_size} bytes. I'm developing compression.", mention_author=False)
-                    else:
-                        await message.reply(file=discord.File(f"{post_id}/{file}"), mention_author=False)
-                        print("Uploaded reel")
-                except Exception as e:
-                    await message.reply("Reel embed failed: "+ e)
-                    print("Uploading reel failed: "+ e)
-                break
+        filename, file = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, message.content)
+
+        try:
+            reel_size = os.path.getsize(filename)
+            print("Reel size:", reel_size)
+            if  reel_size > 8388608:
+                big = True
+                new = await message.reply(f"This reel is: {reel_size} bytes. Give me a minute to compress it.", mention_author=False)
+                filename = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.compress, post_short, file)
+        except Exception as e:
+            print("There do be an issue:", e)
+
+
+        try:
+            if big:
+                await new.delete()
+                
+            await message.reply(file=discord.File(filename), mention_author=False)
+            print("Uploaded reel")
+        except Exception as e:
+            print("Failed to upload reel")
 
         await message.remove_reaction(constants.LOADING_EMOTE, bot.user)
 
         try:
-            shutil.rmtree(post_id)
+            shutil.rmtree(post_short)
             print("Successfully removed Instagram post")
         except OSError as e:
             print("Error: ", e)
@@ -315,6 +321,10 @@ async def pick_random(ctx, start: int, end: int):
 
 @bot.command(name='here', help='Send in target channel for reposting.')
 async def here(ctx):
+    if ctx.message.author.id == constants.CHIGGIN:
+        await ctx.send("No, you can't do that.")
+        return
+
     global pref_map
     await ctx.send("Setting this channel as this server's default repost channel...")
     server_id = ctx.message.guild.id  # Used to ident server from which this was sent
@@ -331,6 +341,10 @@ async def here(ctx):
 
 @bot.command(name='nothere', help="Unsets this channel as your repost channel.")
 async def nothere(ctx):
+    if ctx.message.author.id == constants.CHIGGIN:
+        await ctx.send("No, you can't do that.")
+        return
+
     global pref_map
     await ctx.send("Unsetting this channel...")
     server_id = ctx.message.guild.id
