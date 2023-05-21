@@ -3,3 +3,4 @@ server_prefs.txt
 feedback.txt
 err.log
 __pycache__
+ffmpeg*
