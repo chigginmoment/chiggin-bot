@@ -10,7 +10,7 @@ import ffmpeg
 
 L = instaloader.Instaloader()
 
-L.load_session_from_file("reelwatcher31")
+# L.load_session_from_file("reelwatcher31")
 
 target_filename = "compressed_"
 

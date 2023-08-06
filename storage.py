@@ -154,6 +154,64 @@ def db_nuisance(connection, server_id: str):
         connection.rollback()
 
 
+def db_insert_update_user(connection, user_id, username, delta, servers: list):
+    try:
+        user_id = str(user_id)
+        cursor = connection.cursor()
+        query = "SELECT user_id FROM user_data WHERE user_id = %s"
+        cursor.execute(query, (user_id,))
+        records = cursor.fetchall()
+        if len(records) > 0:
+            print("Updating time delta record.")
+            # Update user.
+            query = "UPDATE user_data SET username = %s, timezone = %s WHERE user_id = %s"
+            cursor.execute(query, (username, delta, user_id))
+            connection.commit()
+
+            # Delete and re-add user's mutual servers.
+            query = "DELETE FROM user_server WHERE user_id = %s"
+            cursor.execute(query, (user_id,))
+            connection.commit()
+
+            # Insert user's mutual servers.
+            for server in servers:
+                query = "INSERT INTO user_server (user_id, server_id) VALUES (%s, %s)"
+                cursor.execute(query, (user_id, str(server.id)))
+                connection.commit()
+
+        else:
+            print("Inserting new time delta record.")
+            # Insert user.
+            query = "INSERT INTO user_data (user_id, username, timezone) VALUES (%s, %s, %s)"
+            cursor.execute(query, (user_id, username, delta))
+            connection.commit()
+            
+            # Insert user's mutual servers.
+            for server in servers:
+                query = "INSERT INTO user_server (user_id, server_id) VALUES (%s, %s)"
+                cursor.execute(query, (user_id, str(server.id)))
+                connection.commit()
+
+    except Exception as error:
+        print("Error in recording timezone: ", error)
+        connection.rollback()
+
+
+def db_get_server_timezones(connection, server_id):
+    try:
+        server_id = str(server_id)
+        cursor = connection.cursor()
+        query = "SELECT ud.user_id, ud.username, ud.timezone FROM user_data AS ud, user_server as us WHERE us.server_id = %s AND us.user_id = ud.user_id"
+        cursor.execute(query, (server_id,))
+        records = cursor.fetchall()
+        return records
+    except Exception as error:
+        print("Error in recording timezone: ", error)
+        connection.rollback()
+    
+
+
+
 def db_disconnect(connection):
     """Disconnects from database for clean exit."""
 

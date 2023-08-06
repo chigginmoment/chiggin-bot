@@ -4,12 +4,12 @@ import discord
 import random
 import re
 import constants
-import psycopg2
 from datetime import datetime
 from bot import Bot
 from storage import *
 import reel_helper
 import shutil
+from timezones import TimezoneHelper
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -30,8 +30,11 @@ pref_map = {}
 
 @bot.event
 async def on_ready():
+    await bot.add_cog(TimezoneHelper(bot=bot))
+    await bot.tree.sync()
     for guild in bot.guilds:
         print(f'Connected to: {guild}')
+        
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
@@ -309,9 +312,11 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
         await ctx.send('You do not have the correct role for this command.')
 
-
 @bot.command(name='pick', help="Picks a number between 2 numbers specified.")
-async def pick_random(ctx, start: int, end: int):
+async def pick_random(ctx, start: int = None, end: int = None):
+    if start == None or end == None:
+        await ctx.send("Command format //pick [start] [end]")
+
     num = random.randint(start, end)
     if start <= 2 <= end:
         num = 2
@@ -409,6 +414,5 @@ async def test(ctx):
         await ctx.send("Test run.")
     else:
         await ctx.send("No, you can't do that.")
-
 
 bot.run(TOKEN)
