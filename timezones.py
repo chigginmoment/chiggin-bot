@@ -82,8 +82,9 @@ class TimezoneHelper(commands.Cog):
 
     @app_commands.command(name="timezones", description="I'll tell you what timezones everyone else is in!")
     async def get_times(self, interaction: discord.Interaction):
+        await interaction.response.defer()
         times = db_get_server_timezones(self.bot.connection, interaction.guild.id)
         embed = await self.construct_embed(times, interaction.guild)
-        await interaction.response.send_message("Here you go!", embed=embed)
+        await interaction.followup.send("Here you go!", embed=embed)
         
 

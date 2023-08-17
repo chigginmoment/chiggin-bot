@@ -174,10 +174,10 @@ async def on_message(message):
         except OSError as e:
             print("Error: ", e)
 
-    if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", message.content):
-        url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", message.content).group(2)
-        if message.embeds and message.embeds[0].video:
-            await message.add_reaction(constants.TWITTER_EMOTE)
+    if re.match(r".*(https://)(x\.com/[^\n ]*).*", message.content):
+        url = re.search(".*(https://)(x\.com/[^\n ]*).*", message.content).group(2)
+        # if message.embeds and message.embeds[0].video:
+        await message.add_reaction(constants.TWITTER_EMOTE)
             
     if bot.user.mentioned_in(message):  # action on being mentioned
         #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
@@ -223,7 +223,7 @@ async def on_message(message):
 
 @bot.event
 async def on_message_edit(before, after):
-    if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", after.content):
+    if re.match(r".*(https://)(x\.com/[^\n ]*).*", after.content):
         url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", after.content).group(2)
         if after.embeds and after.embeds[0].video:
             await after.add_reaction(constants.TWITTER_EMOTE)
@@ -248,13 +248,13 @@ async def on_raw_reaction_add(payload):
             print("User voted repost deleted.")
 
     elif payload.emoji.name == constants.TWITTER_EMOTE and payload.message_id not in spam_protection and reaction.count <=2:
-        if re.match(r".*(https://)(twitter\.com/[^\n ]*).*", message.content):
-            if message.embeds and message.embeds[0].video:
-                url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", message.content).group(2)
-                await message.reply("https://vx" + url, mention_author=False)
-            else:
-                await message.channel.send("I found a Twitter link but not a video embed.\
-                If you want to include this functionality, let me know.")
+        if re.match(r".*(https://)(x\.com/[^\n ]*).*", message.content):
+            # if message.embeds and message.embeds[0].video:
+            url = re.search(".*(https://x\.com)(/[^\n ]*).*", message.content).group(2)
+            await message.reply("https://vxtwitter.com" + url, mention_author=False)
+            # else:
+            #     await message.channel.send("I found a Twitter link but not a video embed.\
+            #     If you want to include this functionality, let me know.")
             spam_protection.append(payload.message_id)
             await asyncio.sleep(600)
             spam_protection.remove(payload.message_id)
