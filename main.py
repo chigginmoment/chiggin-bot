@@ -38,7 +38,7 @@ async def on_ready():
         if guild.name == GUILD:  # figures out what the current guild is
             break
 
-    activity = discord.Activity(type=discord.ActivityType.watching, name="Instagram suspend me")
+    activity = discord.Activity(type=discord.ActivityType.watching, name="it all come tumbling down tumbling down tumbling down")
     await bot.change_presence(status=discord.Status.online, activity=activity)
 
     # global pref_array
@@ -326,7 +326,7 @@ async def pick_random(ctx, start: int = None, end: int = None):
 
 @bot.command(name='here', help='Send in target channel for reposting.')
 async def here(ctx):
-    if ctx.message.author.id == constants.CHIGGIN:
+    if ctx.message.author.id != constants.CHIGGIN:
         await ctx.send("No, you can't do that.")
         return
 
@@ -346,7 +346,7 @@ async def here(ctx):
 
 @bot.command(name='nothere', help="Unsets this channel as your repost channel.")
 async def nothere(ctx):
-    if ctx.message.author.id == constants.CHIGGIN:
+    if ctx.message.author.id != constants.CHIGGIN:
         await ctx.send("No, you can't do that.")
         return
 

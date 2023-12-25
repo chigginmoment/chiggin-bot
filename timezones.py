@@ -86,5 +86,16 @@ class TimezoneHelper(commands.Cog):
         times = db_get_server_timezones(self.bot.connection, interaction.guild.id)
         embed = await self.construct_embed(times, interaction.guild)
         await interaction.followup.send("Here you go!", embed=embed)
+
+    @commands.Cog.listener()
+    async def on_raw_member_remove(self, payload):
+        user_id = payload.user.id
+        server_id = payload.guild_id
+        db_delete_user_server(self.bot.connection, server_id, user_id)
+
+
+    # TODO: That thing Mo suggested
+
+    # TODO: /setevent. Using a dropdown, the user can set the time they want 
         
 

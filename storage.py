@@ -210,6 +210,17 @@ def db_get_server_timezones(connection, server_id):
         connection.rollback()
     
 
+def db_delete_user_server(connection, server_id, user_id):
+    try:
+        server_id = str(server_id)
+        user_id = str(user_id)
+        cursor = connection.cursor()
+        query = "DELETE FROM user_server WHERE server_id = %s AND user_id = %s"
+        cursor.execute(query, (server_id, user_id))
+        connection.commit()
+    except Exception as error:
+        print("Error in removing user: ", error)
+        connection.rollback()
 
 
 def db_disconnect(connection):
