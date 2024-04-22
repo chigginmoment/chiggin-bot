@@ -103,6 +103,8 @@ async def on_message(message):
 
     if message.content == 'raise exception':
         raise discord.DiscordException
+    
+    # Copypasta section
 
     if re.match(r"(?i)(^sus )|(.* sus$)|(.* sus .*)|(^sus$)", message.content) and message.channel.id not in spam_protection:
         roll = random.randint(1, 5)
@@ -139,6 +141,8 @@ async def on_message(message):
     if re.match(r'.*<:dj:896639618601074689>.*', message.content):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
+    # End copypasta section
+
     if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):  
         await message.add_reaction(constants.LOADING_EMOTE)  
         post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content).group(1).strip()
@@ -149,12 +153,13 @@ async def on_message(message):
         try:
             reel_size = os.path.getsize(filename)
             print("Reel size:", reel_size)
-            if  reel_size > 8388608:
+            if  reel_size > 8000000:
                 big = True
                 new = await message.reply(f"This reel is: {reel_size} bytes. Give me a minute to compress it.", mention_author=False)
                 filename = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.compress, post_short, file)
         except Exception as e:
-            print("There do be an issue:", e)
+            with open('err.log', 'a') as f:
+                f.write("Error uploading Instagram post on", datetime.now() + "details:", e)
 
 
         try:
@@ -172,22 +177,23 @@ async def on_message(message):
             shutil.rmtree(post_short)
             print("Successfully removed Instagram post")
         except OSError as e:
-            print("Error: ", e)
+            with open('err.log', 'a') as f:
+                f.write("Error removing Instagram post on", datetime.now(), "details:", e)
 
     if re.match(r".*(https://)(x\.com/[^\n ]*).*", message.content):
         url = re.search(".*(https://)(x\.com/[^\n ]*).*", message.content).group(2)
         # if message.embeds and message.embeds[0].video:
         await message.add_reaction(constants.TWITTER_EMOTE)
             
-    if bot.user.mentioned_in(message):  # action on being mentioned
-        #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
-        if "mention" in spam_protection:
-            await message.channel.send("My prefix is //")
-        else:
-            spam_protection.append("mention")
-            await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
-            await asyncio.sleep(14400)
-            spam_protection.remove("mention")
+    # if bot.user.mentioned_in(message):  # action on being mentioned
+    #     #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
+    #     if "mention" in spam_protection:
+    #         await message.channel.send("My prefix is //")
+    #     else:
+    #         spam_protection.append("mention")
+    #         await message.channel.send("<@" + str(constants.CHIGGIN) + ">")
+    #         await asyncio.sleep(14400)
+    #         spam_protection.remove("mention")
 
     if not message.guild:
         try:
@@ -304,7 +310,7 @@ async def on_error(event, *args, **kwargs):
         if event == 'on_message':
             f.write(f'Unhandled message error: {args[0]} at time {datetime.now()}\n')
         else:
-            raise
+            f.write(f'Unhandled unknown error: {args[0]} at time {datetime.now()}\n')
 
  
 @bot.event
