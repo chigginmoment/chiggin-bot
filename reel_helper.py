@@ -7,6 +7,8 @@ import instaloader
 import re
 import discord
 import ffmpeg
+import requests
+from instaloader import Post
 
 L = instaloader.Instaloader()
 
@@ -21,22 +23,32 @@ def download(link):
     """
     try:
         post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", link).group(1).strip()
-        print("Getting post.")
-        post = instaloader.Post.from_shortcode(L.context, post_short)
+        print("Getting post (updated).")
 
-        L.download_post(post, target=post_short)
+        L = instaloader.Instaloader()
 
-        for file in os.listdir(f"{post_short}"):
-                if file.endswith(".mp4"):
-                    original_filename = f"{post_short}/{file}"
-                    return original_filename, file
+        post = Post.from_shortcode(L.context, post_short)
+        url = post.video_url
+        response = requests.get(url, stream=True)
+        filename = f"{post_short}.mp4"
+        print("Downloading file.")
+        if response.status_code == 200:
+            with open(filename, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        file.write(chunk)
+
+            return filename
+        else:
+            print("Error in response code:", response.status_code)
     except Exception as e:
         print(e)
+        return None
 
-def compress(post_short, file):
+def compress(post_short, filename):
     print("Compressing.")
-    original_filename = f"{post_short}/{file}"
-    output_filename = f"{post_short}/{target_filename}{file}"
+    original_filename = filename
+    output_filename = f"{target_filename}{filename}"
     compress_video(original_filename, output_filename, 8 * 1000)
     return output_filename
 

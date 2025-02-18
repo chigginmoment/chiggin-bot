@@ -10,6 +10,7 @@ from storage import *
 import reel_helper
 import shutil
 from timezones import TimezoneHelper
+from music import Music
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -31,7 +32,8 @@ pref_map = {}
 @bot.event
 async def on_ready():
     await bot.add_cog(TimezoneHelper(bot=bot))
-    await bot.tree.sync()
+    await bot.add_cog(Music(bot=bot))
+    # await bot.tree.sync()
     for guild in bot.guilds:
         print(f'Connected to: {guild}')
         
@@ -148,7 +150,12 @@ async def on_message(message):
         post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content).group(1).strip()
         big = False
         loop = asyncio.get_event_loop()
-        filename, file = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, message.content)
+        filename = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, message.content)
+
+        if filename is None:
+            await message.reply(f"I was unable to download this reel. It may be restricted.", mention_author=False)
+            await message.remove_reaction(constants.LOADING_EMOTE, bot.user)
+            return
 
         try:
             reel_size = os.path.getsize(filename)
@@ -156,10 +163,12 @@ async def on_message(message):
             if  reel_size > 8000000:
                 big = True
                 new = await message.reply(f"This reel is: {reel_size} bytes. Give me a minute to compress it.", mention_author=False)
-                filename = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.compress, post_short, file)
+                old_filename = filename
+                filename = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.compress, post_short, filename)
+                os.remove(old_filename)
         except Exception as e:
             with open('err.log', 'a') as f:
-                f.write("Error uploading Instagram post on", datetime.now() + "details:", e)
+                f.write("Error acquiring Instagram post on", datetime.now() + "details:", e)
 
 
         try:
@@ -170,20 +179,22 @@ async def on_message(message):
             print("Uploaded reel")
         except Exception as e:
             print("Failed to upload reel")
+            with open('err.log', 'a') as f:
+                f.write("Error uploading Instagram post on", datetime.now() + "details:", e)
 
         await message.remove_reaction(constants.LOADING_EMOTE, bot.user)
 
         try:
-            shutil.rmtree(post_short)
+            os.remove(filename)
             print("Successfully removed Instagram post")
         except OSError as e:
             with open('err.log', 'a') as f:
                 f.write("Error removing Instagram post on", datetime.now(), "details:", e)
 
-    if re.match(r".*(https://)(x\.com/[^\n ]*).*", message.content):
-        url = re.search(".*(https://)(x\.com/[^\n ]*).*", message.content).group(2)
-        # if message.embeds and message.embeds[0].video:
-        await message.add_reaction(constants.TWITTER_EMOTE)
+    # if re.match(r".*(https://)(x\.com/[^\n ]*).*", message.content):
+    #     url = re.search(".*(https://)(x\.com/[^\n ]*).*", message.content).group(2)
+    #     # if message.embeds and message.embeds[0].video:
+    #     await message.add_reaction(constants.TWITTER_EMOTE)
             
     # if bot.user.mentioned_in(message):  # action on being mentioned
     #     #    await message.channel.send("<@" + str(constants.CHIGGIN) + ">")]
@@ -229,10 +240,10 @@ async def on_message(message):
 
 @bot.event
 async def on_message_edit(before, after):
-    if re.match(r".*(https://)(x\.com/[^\n ]*).*", after.content):
-        url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", after.content).group(2)
-        if after.embeds and after.embeds[0].video:
-            await after.add_reaction(constants.TWITTER_EMOTE)
+    # if re.match(r".*(https://)(x\.com/[^\n ]*).*", after.content):
+    #     url = re.search(".*(https://)(twitter\.com/[^\n ]*).*", after.content).group(2)
+    #     if after.embeds and after.embeds[0].video:
+    #         await after.add_reaction(constants.TWITTER_EMOTE)
     if re.match(r'.*<:dj:896639618601074689>.*', after.content):
         await after.channel.send("🐖💨<:gupy:978882222054592553>")
 
