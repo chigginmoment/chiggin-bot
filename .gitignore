@@ -5,3 +5,4 @@ err.log
 __pycache__
 ffmpeg*
 music
+.env
