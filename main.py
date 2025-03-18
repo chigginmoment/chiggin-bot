@@ -4,6 +4,8 @@ import discord
 import random
 import re
 import constants
+import requests
+
 from datetime import datetime
 from bot import Bot
 from storage import *
@@ -144,13 +146,26 @@ async def on_message(message):
         await message.channel.send("🐖💨<:gupy:978882222054592553>")
 
     # End copypasta section
+    # if re.match(r".*https:\/\/www\.instagram\.com\/share\/(.*)", message.content):
+    #     post_short = re.search(r".*https:\/\/www\.instagram\.com\/share\/(.*)", message.content).group(1).strip()
+    #     await message.channel.send(post_short)
 
-    if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):  
+    if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content) or re.match(r".*https:\/\/www\.instagram\.com\/share\/(.*)", message.content):  
         await message.add_reaction(constants.LOADING_EMOTE)  
-        post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content).group(1).strip()
+
+        if re.match(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content):
+            post_short = re.search(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content).group(1).strip()
+        else:
+            link = re.search(r"https://www\.instagram\.com/share/[^\s]+", message.content).group(0).strip()
+            response = requests.head(link , allow_redirects=True)  # Follow redirects
+            print(response.url)
+            post_short = re.search(r".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", response.url).group(1).strip()
+
+        # post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message.content).group(1).strip()
         big = False
         loop = asyncio.get_event_loop()
-        filename = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, message.content)
+        print("passed", post_short)
+        filename = await loop.run_in_executor(ThreadPoolExecutor(), reel_helper.download, post_short)
 
         if filename is None:
             await message.reply(f"I was unable to download this reel. It may be restricted.", mention_author=False)

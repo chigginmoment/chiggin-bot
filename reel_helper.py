@@ -17,12 +17,12 @@ L = instaloader.Instaloader()
 target_filename = "compressed_"
 
 
-def download(link):
+def download(post_short):
     """
     Downloads an Instagram post for a given link.
     """
     try:
-        post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", link).group(1).strip()
+        # post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", link).group(1).strip()
         print("Getting post (updated).")
 
         L = instaloader.Instaloader()
@@ -52,13 +52,13 @@ def compress(post_short, filename):
     compress_video(original_filename, output_filename, 8 * 1000)
     return output_filename
 
-def download_and_compress(message):
+def download_and_compress(post_short):
     """
     Downloads an Instagram post for a given link. Compresses the Instagram post if
     it exceeds the designated size.
     """
 
-    post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message).group(1).strip()
+    # post_short = re.search(".*https:\/\/www\.instagram\.com\/reel\/(.*)\/.*", message).group(1).strip()
     print("Getting post.")
     post = instaloader.Post.from_shortcode(L.context, post_short)
 

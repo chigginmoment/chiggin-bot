@@ -37,14 +37,45 @@ ffmpegopts = {
 
 ytdl = YoutubeDL(ytdlopts)
 
-class Song:
+class Song():
     """Song object containing all music data and its relevant info."""
-    def __init__(self, title, web_url, requester, file_path, uploader):
+    def __init__(self, title, web_url, requester, file_path, uploader, song_duration):
         self.title = title
         self.web_url = web_url
         self.requester = requester
         self.file_path = file_path
         self.uploader = uploader
+        self.song_duration = song_duration
+
+    def get_duration(self):
+        seconds = self.song_duration
+        hour = seconds // 3600
+        seconds %= 3600
+        minutes = seconds // 60
+        seconds %= 60
+        if hour > 0:
+            duration = "%dh %02dm %02ds" % (hour, minutes, seconds)
+        else:
+            duration = "%02dm %02ds" % (minutes, seconds)
+        
+        return duration
+
+
+class SongSource(discord.FFmpegPCMAudio):
+    """Source object that allows for reading current amount of reads to calculate duration"""
+    def __init__(self, source, metadata = None):
+        self.source = source
+        self.read_count = 0
+        self.metadata = metadata # The Song object that contains all the info
+    
+    def read(self):
+        data = self.source.read()
+        if data:
+            self.read_count += 1
+        return data
+
+    def curr_dur(self):
+        return self.read_count
 
 
 class VoiceConnectionError(commands.CommandError):
@@ -149,28 +180,34 @@ class MusicPlayer:
 
             print(f"Now playing {song_data.title} requested by {song_data.requester}")
             
-            if self.loopqueue:
-                await self.queue.put(song_data)
-                await self._channel.send(f"Loop On: Placed {song_data.title} back in the queue.")
 
             ffmpeg_options = {
                 'options': '-vn',
             }
-            source = discord.FFmpegPCMAudio(song_data.file_path, **ffmpeg_options)
+            
+            audio = discord.FFmpegPCMAudio(song_data.file_path, **ffmpeg_options)
 
-            self.current = source
+            song_source = SongSource(audio, song_data)
 
-            self._guild.voice_client.play(source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
+            self.current = song_source
+            print(song_source)
+
+            self._guild.voice_client.play(song_source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
             embed = discord.Embed(title="Now playing", description=f"[{song_data.title} by {song_data.uploader}]({song_data.web_url}) [requested by {song_data.requester}]", color=discord.Color.red())
             self.np = await self._channel.send(embed=embed)
             await self.next.wait()
+            print("Song finished playing.")
+
+            if self.loopqueue:
+                await self.queue.put(self.current.metadata)
+                await self._channel.send(f"Loop On: Placed {song_data.title} back in the queue.")
 
             self.current = None
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
         return self.bot.loop.create_task(self._cog.cleanup(guild))
-
+        
 
 class Music(commands.Cog):
     """Music related commands."""
@@ -233,6 +270,7 @@ class Music(commands.Cog):
         This command also handles moving the bot to different channels.
         """
         print("Join command")
+
         if not channel:
             try:
                 channel = ctx.author.voice.channel
@@ -242,7 +280,11 @@ class Music(commands.Cog):
                 raise InvalidVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
 
         vc = ctx.voice_client
-        # print(vc, channel, ctx.author, ctx.author.voice.channel)
+        print(vc, channel, ctx.author, ctx.author.voice.channel)
+
+        # TODO: Delete an existing Player
+        if ctx.guild.id in self.players:
+            del self.players[ctx.guild.id]
 
         if vc:
             if vc.channel.id == channel.id:
@@ -259,10 +301,6 @@ class Music(commands.Cog):
         if (random.randint(0, 1) == 0):
             await ctx.message.add_reaction('👍')
         await ctx.send(f'**Joined `{channel}`**')
-
-    def sanitize_string(input_string):
-        """Sanitize a string to make it safe for filenames."""
-        return ''.join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in input_string).replace(' ', '_')
 
     @commands.command(name='play', description="streams music")
     async def play_(self, ctx, *, search: str):
@@ -316,13 +354,17 @@ class Music(commands.Cog):
                 title = video.get('title')
                 uploader = video.get('uploader')
                 filepath = ydl.prepare_filename(video)
-        # vc.play(discord.FFmpegPCMAudio(stream_url, **ffmpeg_options))
-        # vc.play(discord.FFmpegPCMAudio(file_path))
+                song_duration = video.get('duration')
+
+        if song_duration > 900:
+            await ctx.send(f"Song {title} duration is {song_duration} seconds long, longer than 15 minutes. Can't add this.")
+            return
+
         await ctx.send(f"Added to Queue: {title}, uploaded by {uploader}")
         # print(url)
 
         requester = ctx.author
-        song_data = Song(title, url, requester, filepath, uploader)
+        song_data = Song(title, url, requester, filepath, uploader, song_duration)
 
         print(f"Passed song {song_data.title} to the queue")
         await player.queue.put(song_data)
@@ -369,6 +411,7 @@ class Music(commands.Cog):
             title = info.get('title')
             uploader = info.get('uploader')
             new_filepath = ydl.prepare_filename(info)
+            song_duration = info.get('duration')
 
         print(new_filepath)
 
@@ -376,7 +419,7 @@ class Music(commands.Cog):
 
 
         requester = ctx.author
-        song_data = Song(title, url, requester, new_filepath, uploader)
+        song_data = Song(title, url, requester, new_filepath, uploader, song_duration)
 
         print(f"Passed song {song_data.title} to the queue")
         await player.queue.put(song_data)
@@ -442,9 +485,10 @@ class Music(commands.Cog):
             try:
                 s = player.queue._queue[pos-1]
                 del player.queue._queue[pos-1]
-                embed = discord.Embed(title="", description=f"Removed [{s['title']}]({s['webpage_url']}) [{s['requester'].mention}]", color=discord.Color.red())
+                embed = discord.Embed(title="", description=f"Removed [{s.title}]({s.web_url}) [{s.requester}]", color=discord.Color.red())
                 await ctx.send(embed=embed)
-            except:
+            except Exception as e:
+                print(e)
                 embed = discord.Embed(title="", description=f'Could not find a track for "{pos}"', color=discord.Color.red())
                 await ctx.send(embed=embed)
     
@@ -492,7 +536,14 @@ class Music(commands.Cog):
             embed = discord.Embed(title="", description="queue is empty", color=discord.Color.red())
             return await ctx.send(embed=embed)
 
-        seconds = vc.source.duration % (24 * 3600) 
+        # print(vc.source)
+
+        # print(vc.source.curr_dur())
+        read_count = vc.source.curr_dur() # each read is 20 ms
+
+        seconds = read_count / 50
+        print(seconds)
+
         hour = seconds // 3600
         seconds %= 3600
         minutes = seconds // 60
@@ -502,15 +553,18 @@ class Music(commands.Cog):
         else:
             duration = "%02dm %02ds" % (minutes, seconds)
 
-        print(duration)
-
+        # print(duration)
         # Grabs the songs in the queue...
         upcoming = list(itertools.islice(player.queue._queue, 0, int(len(player.queue._queue))))
-        print(upcoming)
-        fmt = '\n'.join(f"`{(upcoming.index(_)) + 1}.` [{_['title']}]({_['webpage_url']}) | ` {duration} Requested by: {_['requester']}`\n" for _ in upcoming)
-        fmt = f"\n__Now Playing__:\n[{vc.source.title}]({vc.source.web_url}) | ` {duration} Requested by: {vc.source.requester}`\n\n__Up Next:__\n" + fmt + f"\n**{len(upcoming)} songs in queue**"
+        # print("Upcoming:", upcoming)
+        # fmt = '\n'.join(f"`{(upcoming.index(_)) + 1}.` [{_['title']}]({_['webpage_url']}) | ` {duration} Requested by: {_['requester']}`\n" for _ in upcoming)
+        fmt = '\n'.join(f"`{i + 1}.` [{source.title}]({source.web_url}) uploaded by {source.uploader}| Duration: {source.get_duration()} ` Requested by: {source.requester}`\n" 
+                for i, source in enumerate(upcoming))
+        fmt = f"\n__Now Playing__:\n[{vc.source.metadata.title}]({vc.source.metadata.web_url}) uploaded by {vc.source.metadata.uploader} | Playing for: {duration} ` Requested by: {vc.source.metadata.requester}`\n\n__Up Next:__\n" + fmt + f"\n**{len(upcoming)} songs in queue**"
+        # print(fmt)
+
         embed = discord.Embed(title=f'Queue for {ctx.guild.name}', description=fmt, color=discord.Color.red())
-        embed.set_footer(text=f"{ctx.author.display_name}", icon_url=ctx.author.avatar_url)
+        embed.set_footer(text=f"{ctx.author.display_name}", icon_url=ctx.author.avatar)
 
         await ctx.send(embed=embed)
 
@@ -528,7 +582,10 @@ class Music(commands.Cog):
             embed = discord.Embed(title="", description="I am currently not playing anything", color=discord.Color.red())
             return await ctx.send(embed=embed)
         
-        seconds = vc.source.duration % (24 * 3600) 
+
+        read_count = vc.source.curr_dur() # each read is 20 ms
+
+        seconds = read_count / 50
         hour = seconds // 3600
         seconds %= 3600
         minutes = seconds // 60
@@ -538,8 +595,8 @@ class Music(commands.Cog):
         else:
             duration = "%02dm %02ds" % (minutes, seconds)
 
-        embed = discord.Embed(title="", description=f"[{vc.source.title}]({vc.source.web_url}) [{vc.source.requester.mention}] | `{duration}`", color=discord.Color.red())
-        embed.set_author(icon_url=self.bot.user.avatar_url, name=f"Now Playing 🎶")
+        embed = discord.Embed(title="", description=f"[{vc.source.metadata.title}]({vc.source.metadata.web_url}) [{vc.source.metadata.requester}] uploaded by {vc.source.metadata.uploader} | `{duration} / {vc.source.metadata.get_duration()}`", color=discord.Color.red())
+        embed.set_author(icon_url=self.bot.user.avatar, name=f"Now Playing 🎶")
         await ctx.send(embed=embed)
 
     @commands.command(name='volume', description="changes volume")
@@ -581,6 +638,8 @@ class Music(commands.Cog):
         """
         vc = ctx.voice_client
 
+        player = self.get_player(ctx)
+
         if not vc or not vc.is_connected():
             embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.red())
             return await ctx.send(embed=embed)
@@ -590,7 +649,6 @@ class Music(commands.Cog):
         await ctx.send('**Successfully disconnected**')
 
         await self.cleanup(ctx.guild)
-
 
 def setup(bot):
     bot.add_cog(Music(bot))
