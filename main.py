@@ -193,7 +193,7 @@ async def on_message(message):
             await message.reply(file=discord.File(filename), mention_author=False)
             print("Uploaded reel")
         except Exception as e:
-            print("Failed to upload reel")
+            print("Failed to upload reel, error:", e)
             with open('err.log', 'a') as f:
                 f.write("Error uploading Instagram post on", datetime.now() + "details:", e)
 

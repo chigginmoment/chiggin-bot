@@ -154,7 +154,7 @@ class MusicPlayer:
         self._channel = ctx.channel
         self._cog = ctx.cog
 
-        self.queue = asyncio.Queue(maxsize=10)
+        self.queue = asyncio.Queue(maxsize=100)
         self.next = asyncio.Event()
 
         self.np = None  # Now playing message
@@ -226,8 +226,9 @@ class Music(commands.Cog):
 
         try:
             del self.players[guild.id]
-        except KeyError:
-            pass
+            print("Music:cleanup: removed player", guild.id)
+        except Exception as e:
+            print(e)
 
     async def __local_check(self, ctx):
         """A local check which applies to all commands in this cog."""
@@ -253,11 +254,16 @@ class Music(commands.Cog):
         """Retrieve the guild player, or generate one."""
         try:
             player = self.players[ctx.guild.id]
+            print("Successfully fetched player:", ctx.guild.id)
         except KeyError:
             player = MusicPlayer(ctx)
             self.players[ctx.guild.id] = player
-
+            print("Established new player:", ctx.guild.id)
+        
         return player
+
+    async def download_video(self, ydl_otps):
+        """Downloads the suggested video as an mp3 file."""
 
     @commands.command(name='join', description="connects to voice")
     async def connect_(self, ctx, *, channel: discord.VoiceChannel=None):
@@ -300,6 +306,7 @@ class Music(commands.Cog):
                 raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
         if (random.randint(0, 1) == 0):
             await ctx.message.add_reaction('👍')
+            
         await ctx.send(f'**Joined `{channel}`**')
 
     @commands.command(name='play', description="streams music")
@@ -337,7 +344,7 @@ class Music(commands.Cog):
             'quiet': True,
             'noplaylist': True,
             # 'verbose': True,
-            'limit-rate': 100 * 1024,
+            'quiet': True,
             'restrictfilenames': True,
             'max_filesize': 30 * 1024 * 1024,
         }
@@ -356,8 +363,9 @@ class Music(commands.Cog):
                 filepath = ydl.prepare_filename(video)
                 song_duration = video.get('duration')
 
-        if song_duration > 900:
-            await ctx.send(f"Song {title} duration is {song_duration} seconds long, longer than 15 minutes. Can't add this.")
+        max_dur_mins = 32
+        if song_duration > max_dur_mins * 60:
+            await ctx.send(f"Song {title} duration is {song_duration} seconds long, longer than {max_dur_mins} minutes. Can't add this.")
             return
 
         await ctx.send(f"Added to Queue: {title}, uploaded by {uploader}")
@@ -367,7 +375,12 @@ class Music(commands.Cog):
         song_data = Song(title, url, requester, filepath, uploader, song_duration)
 
         print(f"Passed song {song_data.title} to the queue")
-        await player.queue.put(song_data)
+
+        try:
+            await player.queue.put(song_data)
+        except Exception as e:
+            print(e)
+            await ctx.send(f"Error in processing song {e}")
 
     @commands.command(name='playurl', description="plays music from url")
     async def playurl_(self, ctx, url):
@@ -400,8 +413,6 @@ class Music(commands.Cog):
             'format': 'bestaudio/best',
             'quiet': True,
             'noplaylist': True,
-            # 'verbose': True,
-            'limit-rate': 100 * 1024,
             'restrictfilenames': True,
             'max_filesize': 30 * 1024 * 1024,
         }
@@ -412,6 +423,11 @@ class Music(commands.Cog):
             uploader = info.get('uploader')
             new_filepath = ydl.prepare_filename(info)
             song_duration = info.get('duration')
+
+        max_dur_mins = 32
+        if song_duration > max_dur_mins * 60:
+            await ctx.send(f"Song {title} duration is {song_duration} seconds long, longer than {max_dur_mins} minutes. Can't add this.")
+            return
 
         print(new_filepath)
 
@@ -532,7 +548,7 @@ class Music(commands.Cog):
             return await ctx.send(embed=embed)
 
         player = self.get_player(ctx)
-        if player.queue.empty():
+        if player.queue.empty() and not player.current:
             embed = discord.Embed(title="", description="queue is empty", color=discord.Color.red())
             return await ctx.send(embed=embed)
 
@@ -556,14 +572,14 @@ class Music(commands.Cog):
         # print(duration)
         # Grabs the songs in the queue...
         upcoming = list(itertools.islice(player.queue._queue, 0, int(len(player.queue._queue))))
-        # print("Upcoming:", upcoming)
+        print("Upcoming:", upcoming)
         # fmt = '\n'.join(f"`{(upcoming.index(_)) + 1}.` [{_['title']}]({_['webpage_url']}) | ` {duration} Requested by: {_['requester']}`\n" for _ in upcoming)
         fmt = '\n'.join(f"`{i + 1}.` [{source.title}]({source.web_url}) uploaded by {source.uploader}| Duration: {source.get_duration()} ` Requested by: {source.requester}`\n" 
                 for i, source in enumerate(upcoming))
-        fmt = f"\n__Now Playing__:\n[{vc.source.metadata.title}]({vc.source.metadata.web_url}) uploaded by {vc.source.metadata.uploader} | Playing for: {duration} ` Requested by: {vc.source.metadata.requester}`\n\n__Up Next:__\n" + fmt + f"\n**{len(upcoming)} songs in queue**"
+        fmt = f"\n__Now Playing__:\n[{vc.source.metadata.title}]({vc.source.metadata.web_url}) uploaded by {vc.source.metadata.uploader} | Playing for: {duration}/ {vc.source.metadata.get_duration()} ` Requested by: {vc.source.metadata.requester}`\n\n__Up Next:__\n" + fmt + f"\n**{len(upcoming)} songs in queue**"
         # print(fmt)
 
-        embed = discord.Embed(title=f'Queue for {ctx.guild.name}', description=fmt, color=discord.Color.red())
+        embed = discord.Embed(title=f'Queue for {ctx.guild.name}, loop status: {player.loopqueue}', description=fmt, color=discord.Color.red())
         embed.set_footer(text=f"{ctx.author.display_name}", icon_url=ctx.author.avatar)
 
         await ctx.send(embed=embed)
@@ -596,7 +612,7 @@ class Music(commands.Cog):
             duration = "%02dm %02ds" % (minutes, seconds)
 
         embed = discord.Embed(title="", description=f"[{vc.source.metadata.title}]({vc.source.metadata.web_url}) [{vc.source.metadata.requester}] uploaded by {vc.source.metadata.uploader} | `{duration} / {vc.source.metadata.get_duration()}`", color=discord.Color.red())
-        embed.set_author(icon_url=self.bot.user.avatar, name=f"Now Playing 🎶")
+        embed.set_author(icon_url=self.bot.user.avatar, name=f"Now Playing 🎶, loop status: {player.loopqueue}")
         await ctx.send(embed=embed)
 
     @commands.command(name='volume', description="changes volume")
@@ -639,16 +655,21 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         player = self.get_player(ctx)
+        player.loopqueue = False
+        try:
+            if not vc or not vc.is_connected():
+                embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.red())
+                return await ctx.send(embed=embed)
 
-        if not vc or not vc.is_connected():
-            embed = discord.Embed(title="", description="I'm not connected to a voice channel", color=discord.Color.red())
-            return await ctx.send(embed=embed)
+            if (random.randint(0, 1) == 0):
+                await ctx.message.add_reaction('👋')
+            await ctx.send('**Successfully disconnected**')
 
-        if (random.randint(0, 1) == 0):
-            await ctx.message.add_reaction('👋')
-        await ctx.send('**Successfully disconnected**')
+            # player.destroy(player._guild)
 
-        await self.cleanup(ctx.guild)
+            await self.cleanup(ctx.guild)
+        except Exception as e:
+            print(e)
 
 def setup(bot):
     bot.add_cog(Music(bot))
