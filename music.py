@@ -60,6 +60,19 @@ class Song():
         
         return duration
 
+    def get_duration_seconds(self):
+        seconds = self.song_duration
+        hour = seconds // 3600
+        seconds %= 3600
+        minutes = seconds // 60
+        seconds %= 60
+        if hour > 0:
+            duration = "%dh %02dm %02ds" % (hour, minutes, seconds)
+        else:
+            duration = "%02dm %02ds" % (minutes, seconds)
+        
+        return seconds
+
 
 class SongSource(discord.FFmpegPCMAudio):
     """Source object that allows for reading current amount of reads to calculate duration"""
@@ -262,8 +275,7 @@ class Music(commands.Cog):
         
         return player
 
-    async def download_video(self, ydl_otps):
-        """Downloads the suggested video as an mp3 file."""
+
 
     @commands.command(name='join', description="connects to voice")
     async def connect_(self, ctx, *, channel: discord.VoiceChannel=None):
@@ -275,7 +287,6 @@ class Music(commands.Cog):
             will be made.
         This command also handles moving the bot to different channels.
         """
-        print("Join command")
 
         if not channel:
             try:
@@ -286,7 +297,7 @@ class Music(commands.Cog):
                 raise InvalidVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
 
         vc = ctx.voice_client
-        print(vc, channel, ctx.author, ctx.author.voice.channel)
+        print("User", ctx.author, "requested connection to", ctx.author.voice.channel)
 
         # TODO: Delete an existing Player
         if ctx.guild.id in self.players:
@@ -427,6 +438,7 @@ class Music(commands.Cog):
         max_dur_mins = 32
         if song_duration > max_dur_mins * 60:
             await ctx.send(f"Song {title} duration is {song_duration} seconds long, longer than {max_dur_mins} minutes. Can't add this.")
+            # TODO: Zohran Mamdani requests that you delete unusable files 
             return
 
         print(new_filepath)
@@ -552,9 +564,6 @@ class Music(commands.Cog):
             embed = discord.Embed(title="", description="queue is empty", color=discord.Color.red())
             return await ctx.send(embed=embed)
 
-        # print(vc.source)
-
-        # print(vc.source.curr_dur())
         read_count = vc.source.curr_dur() # each read is 20 ms
 
         seconds = read_count / 50
@@ -569,20 +578,47 @@ class Music(commands.Cog):
         else:
             duration = "%02dm %02ds" % (minutes, seconds)
 
-        # print(duration)
         # Grabs the songs in the queue...
         upcoming = list(itertools.islice(player.queue._queue, 0, int(len(player.queue._queue))))
         print("Upcoming:", upcoming)
-        # fmt = '\n'.join(f"`{(upcoming.index(_)) + 1}.` [{_['title']}]({_['webpage_url']}) | ` {duration} Requested by: {_['requester']}`\n" for _ in upcoming)
-        fmt = '\n'.join(f"`{i + 1}.` [{source.title}]({source.web_url}) uploaded by {source.uploader}| Duration: {source.get_duration()} ` Requested by: {source.requester}`\n" 
-                for i, source in enumerate(upcoming))
-        fmt = f"\n__Now Playing__:\n[{vc.source.metadata.title}]({vc.source.metadata.web_url}) uploaded by {vc.source.metadata.uploader} | Playing for: {duration}/ {vc.source.metadata.get_duration()} ` Requested by: {vc.source.metadata.requester}`\n\n__Up Next:__\n" + fmt + f"\n**{len(upcoming)} songs in queue**"
-        # print(fmt)
 
-        embed = discord.Embed(title=f'Queue for {ctx.guild.name}, loop status: {player.loopqueue}', description=fmt, color=discord.Color.red())
-        embed.set_footer(text=f"{ctx.author.display_name}", icon_url=ctx.author.avatar)
+        MAX_LEN = 4096 - 50
+        fmts = []
+        lines = []
+        curr_fmt_len = 0
+        current_playtime = 0
 
-        await ctx.send(embed=embed)
+        for i, source in enumerate(upcoming):
+            line = f"\n`{i + 1}.` {source.title} `requested by {source.requester} | {source.get_duration()}`" # .split('?')[0]
+            line_len = len(line)
+
+            if line_len > MAX_LEN:
+                continue
+
+            if curr_fmt_len + line_len > MAX_LEN:
+                fmts.append("".join(lines))
+
+                # start new embed
+                lines = []
+                curr_fmt_len = 0
+
+            lines.append(line)
+            curr_fmt_len += line_len
+
+        # fmt = '\n'.join(f"`{i + 1}.` [{source.title}]({source.web_url.split('?')[0]})" # There are 1000 characters of tracking if I do not do this
+        #         for i, source in enumerate(upcoming))
+        if lines:
+            fmts.append("".join(lines))
+
+        print("num fmts:", len(fmts))
+
+        for fmt in fmts:
+            print("this fmt len", len(fmt))
+            embed = discord.Embed(title=f'Queue for {ctx.guild.name}, loop status: {player.loopqueue}', description=fmt, color=discord.Color.red())
+            embed.set_footer(text=f"{ctx.author.display_name}", icon_url=ctx.author.avatar)
+
+            await ctx.send(embed=embed)
+
 
     @commands.command(name='np', description="shows the current playing song")
     async def now_playing_(self, ctx):
