@@ -10,6 +10,7 @@ from datetime import datetime
 from bot import Bot
 from storage import *
 import reel_helper
+import tiktok_helper
 import shutil
 from timezones import TimezoneHelper
 from music import Music
@@ -205,6 +206,47 @@ async def on_message(message):
         except OSError as e:
             with open('err.log', 'a') as f:
                 f.write("Error removing Instagram post on", datetime.now(), "details:", e)
+
+    if re.search(r"https://(www\.|vm\.|vt\.)?tiktok\.com/[^\s]+", message.content):
+        url = re.search(r"https://(www\.|vm\.|vt\.)?tiktok\.com/[^\s]+", message.content).group(0).strip()
+        await message.add_reaction(constants.LOADING_EMOTE)
+
+        loop = asyncio.get_event_loop()
+        filename = await loop.run_in_executor(ThreadPoolExecutor(), tiktok_helper.download, url)
+
+        if filename is None:
+            await message.reply("I was unable to download this TikTok.", mention_author=False)
+            await message.remove_reaction(constants.LOADING_EMOTE, bot.user)
+            return
+
+        big = False
+        try:
+            tiktok_size = os.path.getsize(filename)
+            print("TikTok size:", tiktok_size)
+            if tiktok_size > 8000000:
+                big = True
+                new = await message.reply(f"This TikTok is {tiktok_size} bytes. Give me a minute to compress it.", mention_author=False)
+                old_filename = filename
+                filename = await loop.run_in_executor(ThreadPoolExecutor(), tiktok_helper.compress, filename)
+                os.remove(old_filename)
+        except Exception as e:
+            print("Error sizing/compressing TikTok:", e)
+
+        try:
+            if big:
+                await new.delete()
+            await message.reply(file=discord.File(filename), mention_author=False)
+            print("Uploaded TikTok")
+        except Exception as e:
+            print("Failed to upload TikTok, error:", e)
+
+        await message.remove_reaction(constants.LOADING_EMOTE, bot.user)
+
+        try:
+            os.remove(filename)
+            print("Successfully removed TikTok file")
+        except OSError as e:
+            print("Error removing TikTok file:", e)
 
     # if re.match(r".*(https://)(x\.com/[^\n ]*).*", message.content):
     #     url = re.search(".*(https://)(x\.com/[^\n ]*).*", message.content).group(2)
