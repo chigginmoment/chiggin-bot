@@ -1,4 +1,4 @@
-# This file will handle the timezone system.
+# This file will handle the timezone system. (lies)
 
 import discord
 from discord import app_commands
